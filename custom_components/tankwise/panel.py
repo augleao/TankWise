@@ -49,7 +49,7 @@ async def async_register_panel(hass: HomeAssistant) -> None:
             webcomponent_name="tankwise-panel",
             sidebar_title="Tankwise",
             sidebar_icon="mdi:water-pump",
-            module_url="/tankwise/frontend/tankwise-panel.js",
+            module_url="/tankwise/frontend/tankwise-panel.js?v=0.3.0",
             embed_iframe=False,
             require_admin=True,
         )
@@ -61,7 +61,7 @@ async def async_register_panel(hass: HomeAssistant) -> None:
             webcomponent_name="tankwise-panel",
             sidebar_title="Tankwise",
             sidebar_icon="mdi:water-pump",
-            module_url="/tankwise/frontend/tankwise-panel.js",
+            module_url="/tankwise/frontend/tankwise-panel.js?v=0.3.0",
             embed_iframe=False,
             require_admin=True,
         )
