@@ -51,8 +51,22 @@ Your sensor reports **distance to water**. A **lower** reading means a **fuller*
 2. Add `https://github.com/augleao/TankWise` as category **Integration**
 3. Install **Tankwise**, then restart Home Assistant
 4. Settings → Devices & services → **Add integration** → **Tankwise**
+5. After setup, open the sidebar item **Tankwise** to configure entities and parameters in a graphical panel (similar to add-on dashboards)
 
 Or copy `custom_components/tankwise` into your HA `config/custom_components/` folder and restart.
+
+## Configuration panel
+
+After installation, Home Assistant shows a **Tankwise** item in the sidebar (`mdi:water-pump`).
+
+Use it to:
+
+- See live status (controller, demand, pump, distance, level, cycle phase)
+- Select pump / distance / toggle / LED entities
+- Adjust calibration, hysteresis, work/rest cycle, and notifications
+- Enable/disable the controller, set demand, or force reconcile
+
+Day-to-day tuning should happen in this panel. The initial config flow is a short setup; **Configure** on the integration entry remains available as a fallback.
 
 ## Config flow overview
 
