@@ -40,7 +40,10 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up the Tankwise domain (services, panel, websockets)."""
     hass.data.setdefault(DOMAIN, {})
     async_register_websockets(hass)
-    await async_register_panel(hass)
+    try:
+        await async_register_panel(hass)
+    except Exception:  # noqa: BLE001 — panel must not block install
+        _LOGGER.exception("Tankwise sidebar panel failed to register; config flow still works")
 
     async def _resolve_controller(call: ServiceCall) -> TankwiseController | None:
         entry_id = call.data.get("entry_id")
