@@ -22,6 +22,8 @@ from .const import (
 )
 from .controller import TankwiseController
 from .helpers import merge_entry_config
+from .panel import async_register_panel
+from .websocket_api import async_register_websockets
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -35,8 +37,10 @@ CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
-    """Set up the Tankwise domain (services registered once)."""
+    """Set up the Tankwise domain (services, panel, websockets)."""
     hass.data.setdefault(DOMAIN, {})
+    async_register_websockets(hass)
+    await async_register_panel(hass)
 
     async def _resolve_controller(call: ServiceCall) -> TankwiseController | None:
         entry_id = call.data.get("entry_id")

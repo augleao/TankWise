@@ -15,7 +15,7 @@
       },
       "hysteresis": {
         "title": "Hysteresis & reconcile",
-        "description": "Demand turns ON when distance stays below the on threshold for the hold time. Demand turns OFF when distance stays above the off threshold. High-level safety also forces demand and pump OFF when distance is at/above the off threshold.",
+        "description": "Demand turns ON when distance stays below the on threshold for the hold time. Demand turns OFF when distance stays above the off threshold (or immediately for high-level safety).",
         "data": {
           "on_threshold": "Turn-on distance threshold",
           "off_threshold": "Turn-off distance threshold",
