@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-03-22
+
+### Added
+
+- Supervisor **add-on** (`tankwise/`) with Ingress web UI (tank graphic, entity pickers, timers, manual demand)
+- HTTP REST API under `/api/tankwise/...` for the add-on (list/update config, demand, enable, reconcile, entities)
+- Shared `api_common` module used by websocket and HTTP views
+- `repository.yaml` so the GitHub repo can be added as an add-on store repository
+
 ## [0.3.1] - 2026-03-22
 
 ### Fixed

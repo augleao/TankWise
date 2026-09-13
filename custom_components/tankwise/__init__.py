@@ -46,6 +46,13 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         _LOGGER.exception("Tankwise websocket API failed to register")
 
     try:
+        from .http_api import async_register_http
+
+        async_register_http(hass)
+    except Exception:  # noqa: BLE001
+        _LOGGER.exception("Tankwise HTTP API failed to register")
+
+    try:
         from .panel import async_register_panel
 
         await async_register_panel(hass)

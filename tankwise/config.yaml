@@ -1,0 +1,24 @@
+name: "TankWise"
+version: "1.0.0"
+slug: tankwise
+description: "Painel web do TankWise — nível do tanque, demanda da bomba e configuração"
+url: "https://github.com/augleao/TankWise"
+arch:
+  - amd64
+  - aarch64
+  - armv7
+  - armhf
+  - i386
+init: false
+ingress: true
+ingress_port: 8099
+ingress_entry: /
+panel_icon: mdi:water-pump
+panel_title: TankWise
+homeassistant_api: true
+hassio_api: false
+auth_api: false
+ports: {}
+map: []
+options: {}
+schema: {}

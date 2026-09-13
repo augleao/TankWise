@@ -1,147 +1,104 @@
 # Tankwise
 
-**Tankwise** is a Home Assistant custom integration that manages an artesian-well (or similar) pump from a **persisted desired demand**, not by blindly toggling a relay.
+**Tankwise** controla a bomba do poço artesiano a partir de uma **demanda desejada persistida** (não toggla o relé “no escuro”).
 
-This is **local pump/tank control logic** inside Home Assistant. It is **not** a cloud water utility service, Supervisor add-on, or companion API.
+Há duas peças no mesmo repositório:
 
-## What it does
+1. **Integração HACS** (`custom_components/tankwise`) — lógica da bomba, sensores e serviços  
+2. **Add-on do Supervisor** (`tankwise/`) — painel web Ingress (estilo OneDrive Backup Machine)
 
-- Keeps a persisted **Demand** switch as the source of truth (replacement for `var.bomba`-style helpers)
-- Runs a **reconciler** (“stubborn executor”) so the physical pump switch matches demand, with retries
-- Optionally drives demand from a **distance-to-water** sensor using **hysteresis** and hold times
-- Exposes a calibrated **tank level %** sensor (lower distance = fuller tank)
-- Optional **work/rest** cycling, physical toggle inputs, LED mirrors, notifications, and boot recovery
+## O que faz
 
-## What it does not do
+- Mantém o switch **Demand** como fonte da verdade
+- **Reconciliador** teimoso: a bomba física segue a demanda, com retries
+- Histerese pelo sensor de **distância até a água** + tempos de hold
+- Sensor de **nível %** (distância menor = tanque mais cheio)
+- Ciclo trabalho/descanso, botões físicos, LEDs e notificações (opcional)
 
-- No Supervisor add-on / Docker runtime
-- No external companion service
-- No COPASA valve interlocking, LCD publishing, or camera automations (documented as out of scope for v1)
-
-## How it works
+## Como funciona
 
 ```
-Distance sensor ──► hysteresis ──► Desired Demand (persisted)
+Sensor distância ──► histerese ──► Demanda desejada (persistida)
                                         │
-UI / services / physical toggles ───────┘
-                                        │
-                                        ▼
-                              Reconciler (interval + events)
+UI / serviços / botões ─────────────────┘
                                         │
                                         ▼
-                              Pump switch entity (user-selected)
+                              Reconciliador
+                                        │
+                                        ▼
+                              Switch da bomba
 ```
 
-1. **Desired demand** is what you (or automation) set.
-2. The **reconciler** is the only path that turns the physical pump on/off.
-3. High tank level (`distance >= off threshold`) forces demand OFF and pump OFF.
-4. In cyclic mode, rest phases keep the pump OFF even when demand is ON.
+### Distância
 
-### Distance semantics
+- **Cheio** — valor menor (ex.: `82`)
+- **Vazio** — valor maior (ex.: `120`)
+- `%` = 100 no cheio, 0 no vazio
 
-Your sensor reports **distance to water**. A **lower** reading means a **fuller** tank.
+## Instalação recomendada (HA OS)
 
-- **Full distance** — smaller number (e.g. `82`)
-- **Empty distance** — larger number (e.g. `120`)
-- Percentage: `100%` at full, `0%` at empty, clamped to 0–100
+### 1) Integração (HACS)
 
-## Install (HACS)
+1. HACS → Integrações → ⋮ → Repositórios personalizados  
+2. URL: `https://github.com/augleao/TankWise` · categoria **Integration**  
+3. Instale **Tankwise**, reinicie o HA  
+4. Configurações → Dispositivos e serviços → **Adicionar integração** → Tankwise  
 
-1. HACS → **Integrations** → **⋮** → **Custom repositories**
-2. Add `https://github.com/augleao/TankWise` as category **Integration**
-3. Install **Tankwise**, then restart Home Assistant
-4. Settings → Devices & services → **Add integration** → **Tankwise**
-5. After setup, open the sidebar item **Tankwise** to configure entities and parameters in a graphical panel (similar to add-on dashboards)
+### 2) Add-on (painel web)
 
-Or copy `custom_components/tankwise` into your HA `config/custom_components/` folder and restart.
+1. Configurações → Add-ons → Loja → ⋮ → **Repositórios**  
+2. Adicione o **mesmo** URL: `https://github.com/augleao/TankWise`  
+3. Atualize a loja → instale **TankWise** → **Iniciar**  
+4. Abra pela barra lateral (**TankWise**) ou “Abrir IU web”
 
-## Configuration panel
+No painel você escolhe entidades, calibração, timers e demanda manual ON/OFF.
 
-After installation, Home Assistant shows a **Tankwise** item in the sidebar (`mdi:water-pump`).
+> Precisa da integração **0.4.0+** (API HTTP `/api/tankwise/...`) para o add-on funcionar.
 
-Use it to:
+Instalação só com pasta: copie `custom_components/tankwise` para `config/custom_components/` e reinicie.
 
-- See live status (controller, demand, pump, distance, level, cycle phase)
-- Select pump / distance / toggle / LED entities
-- Adjust calibration, hysteresis, work/rest cycle, and notifications
-- Enable/disable the controller, set demand, or force reconcile
+## Painel lateral da integração (opcional)
 
-Day-to-day tuning should happen in this panel. The initial config flow is a short setup; **Configure** on the integration entry remains available as a fallback.
+A integração também registra um painel custom no sidebar. O add-on Ingress é a experiência principal em HA OS.
 
-## Configuration panel
+## Entidades
 
-After install, open **Tankwise** in the Home Assistant **sidebar** (not only the device page).
-
-The sidebar dashboard (add-on style) lets you:
-
-- See live tank level graphics and pump status
-- Pick pump / distance / toggle / LED entities
-- Set calibration, hysteresis, and work/rest timing
-- Manually set demand ON/OFF (persisted “environment variable” 1/0)
-- Enable/disable the master controller and force reconcile
-
-Day-to-day tuning should happen in this panel. The initial config flow is a short setup; **Configure** on the integration entry remains available as a fallback.
-
-## Config flow overview
-
-| Step | What you configure |
-|------|--------------------|
-| Setup | Pump switch, distance sensor, full/empty calibration, % sensor |
-| Hysteresis | On/off thresholds + hold times, reconcile interval |
-| Optional | Work/rest minutes, toggles, LEDs, notify service, level alerts |
-
-Defaults are inspired by a typical setup (on `< 82` for 2 min, off `> 96` for 2 min) but **nothing is hardcoded** — every entity and threshold is selected in the UI. Change thresholds later via **Configure** (options flow).
-
-## Entities (v1)
-
-| Entity | Role |
-|--------|------|
-| `switch.*_controller` | **Master enable** — OFF disables Tankwise and forces pump OFF |
-| `switch.*_demand` | Persisted desired demand |
-| `sensor.*_tank_level` | Fill percentage (optional) |
-| `sensor.*_tank_distance` | Distance helper |
+| Entidade | Função |
+|----------|--------|
+| `switch.*_controller` | Master — OFF desliga Tankwise e força bomba OFF |
+| `switch.*_demand` | Demanda desejada persistida |
+| `sensor.*_tank_level` | Nível % (opcional) |
+| `sensor.*_tank_distance` | Distância |
 | `sensor.*_cycle_phase` | `idle` / `working` / `resting` |
-| `binary_sensor.*_pump_running` | Physical pump ON |
-| `binary_sensor.*_reconcile_fault` | Reconcile/problem flag |
+| `binary_sensor.*_pump_running` | Bomba física ON |
+| `binary_sensor.*_reconcile_fault` | Falha de reconciliação |
 
-## Services
+## Serviços
 
-- `tankwise.turn_on_demand`
-- `tankwise.turn_off_demand`
-- `tankwise.toggle_demand`
-- `tankwise.reconcile_now`
-- `tankwise.enable_controller`
-- `tankwise.disable_controller`
+`turn_on_demand`, `turn_off_demand`, `toggle_demand`, `reconcile_now`, `enable_controller`, `disable_controller`  
+(campo opcional `entry_id` se houver várias instâncias)
 
-Optional `entry_id` when multiple Tankwise instances exist.
+## API HTTP (para o add-on)
 
-## Migrating from YAML automations
+- `GET /api/tankwise/entries`
+- `GET /api/tankwise/entries/{id}`
+- `POST /api/tankwise/entries/{id}/config`
+- `POST /api/tankwise/entries/{id}/enabled`
+- `POST /api/tankwise/entries/{id}/demand`
+- `POST /api/tankwise/entries/{id}/reconcile`
+- `GET /api/tankwise/entities`
 
-| Old concept | Tankwise |
-|-------------|----------|
-| `var.bomba` / helper demand | `switch.tankwise_*_demand` |
-| Direct `switch.turn_on` on the pump from many automations | Let the reconciler own the pump |
-| `timer.timer_bomba` / `timer.timer_descanso` | Built-in work/rest (`rest=0` = continuous) |
-| Physical button automations | Toggle entities in config |
-| LED automations | LED entity list (mirrors real pump state) |
-| Notify automations | Optional notify service + low/critical % |
-
-Disable or remove the old pump automations after Tankwise is configured so they do not fight the reconciler.
-
-## IoT class
-
-`calculated` — Tankwise does not talk to hardware itself. It reads user-selected Home Assistant entities, computes demand/level/cycle state, and calls services on those entities.
-
-## Requirements
+## Requisitos
 
 - Home Assistant **2024.8+**
-- No extra Python packages (`requirements: []`)
+- Add-on: Home Assistant OS / Supervised
 
-## License
+## Licença
 
-MIT — see [LICENSE](LICENSE).
+MIT — [LICENSE](LICENSE)
 
 ## Links
 
-- Issues: https://github.com/augleao/TankWise/issues
-- Releases: https://github.com/augleao/TankWise/releases
+- Issues: https://github.com/augleao/TankWise/issues  
+- Releases: https://github.com/augleao/TankWise/releases  
+- Add-on docs: [tankwise/DOCS.md](tankwise/DOCS.md)

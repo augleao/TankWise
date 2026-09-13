@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>TankWise</title>
+    <link rel="stylesheet" href="static/style.css" />
+  </head>
+  <body>
+    <div class="page">
+      <div class="wrap">
+        <header class="hero">
+          <div>
+            <h1>TankWise</h1>
+            <p>Controle da bomba pelo nível da caixa d’água</p>
+          </div>
+          <div class="hero-right">
+            <span id="badge" class="badge">carregando…</span>
+            <button type="button" class="secondary" id="btn-refresh">Atualizar</button>
+          </div>
+        </header>
+
+        <div id="alert" class="alert hidden"></div>
+
+        <section class="card" id="empty-state" hidden>
+          <div class="empty">
+            <h2>Integração ainda não configurada</h2>
+            <p>
+              1. Instale <strong>Tankwise</strong> pelo HACS<br />
+              2. Em <em>Dispositivos e serviços</em>, adicione a integração Tankwise<br />
+              3. Volte aqui e atualize
+            </p>
+          </div>
+        </section>
+
+        <div id="app" hidden>
+          <div class="tabs" role="tablist">
+            <button type="button" class="tab active" data-tab="monitor">Monitor</button>
+            <button type="button" class="tab" data-tab="config">Entidades</button>
+            <button type="button" class="tab" data-tab="cycle">Ciclo / histerese</button>
+            <button type="button" class="tab" data-tab="alerts">Alertas</button>
+          </div>
+
+          <section class="card" data-panel="monitor">
+            <h2>Status ao vivo</h2>
+            <p class="desc">Nível do tanque, demanda desejada e estado da bomba.</p>
+            <div class="visuals">
+              <div class="visual" id="tank-visual"></div>
+              <div class="visual" id="pump-visual"></div>
+            </div>
+            <div class="stats" id="stats"></div>
+            <div class="manual-box">
+              <div>
+                <h3>Automação</h3>
+                <p class="hint">Liga/desliga o controlador (kill switch).</p>
+                <div class="actions">
+                  <button type="button" id="btn-enable">Ligar automação</button>
+                  <button type="button" class="danger" id="btn-disable">Desligar</button>
+                </div>
+              </div>
+              <div>
+                <h3>Demanda manual</h3>
+                <p class="hint">Variável persistida 1/0 — o reconciliador executa na bomba.</p>
+                <div class="actions">
+                  <button type="button" id="btn-demand-on">Demanda ON</button>
+                  <button type="button" class="danger" id="btn-demand-off">Demanda OFF</button>
+                  <button type="button" class="secondary" id="btn-reconcile">Reconciliar agora</button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="card" data-panel="config" hidden>
+            <h2>Entidades</h2>
+            <p class="desc">Selecione bomba, sensor de distância e opcionais.</p>
+            <div class="grid">
+              <div>
+                <label for="pump_entity">Switch da bomba</label>
+                <select id="pump_entity" data-key="pump_entity"></select>
+              </div>
+              <div>
+                <label for="distance_entity">Sensor de distância</label>
+                <select id="distance_entity" data-key="distance_entity"></select>
+              </div>
+              <div>
+                <label for="toggle_entities">Botões físicos (opcional)</label>
+                <select id="toggle_entities" data-key="toggle_entities" multiple></select>
+                <p class="hint">Segure Ctrl/Cmd para vários</p>
+              </div>
+              <div>
+                <label for="led_entities">LEDs / indicadores (opcional)</label>
+                <select id="led_entities" data-key="led_entities" multiple></select>
+              </div>
+            </div>
+            <div class="grid" style="margin-top: 12px">
+              <div>
+                <label for="full_distance">Distância cheio</label>
+                <input id="full_distance" data-key="full_distance" type="number" step="any" />
+                <p class="hint">Menor valor = tanque mais cheio</p>
+              </div>
+              <div>
+                <label for="empty_distance">Distância vazio</label>
+                <input id="empty_distance" data-key="empty_distance" type="number" step="any" />
+              </div>
+              <div class="check">
+                <input id="expose_percentage" data-key="expose_percentage" type="checkbox" />
+                <label for="expose_percentage">Expor sensor de nível %</label>
+              </div>
+            </div>
+            <div class="actions">
+              <button type="button" id="btn-save-config">Salvar configuração</button>
+            </div>
+          </section>
+
+          <section class="card" data-panel="cycle" hidden>
+            <h2>Histerese e ciclo trabalho/descanso</h2>
+            <p class="desc">Limiares em distância (mesmo sentido do sensor).</p>
+            <div class="grid">
+              <div>
+                <label for="on_threshold">Liga abaixo de (on)</label>
+                <input id="on_threshold" data-key="on_threshold" type="number" step="any" />
+              </div>
+              <div>
+                <label for="off_threshold">Desliga acima de (off)</label>
+                <input id="off_threshold" data-key="off_threshold" type="number" step="any" />
+              </div>
+              <div>
+                <label for="on_hold_seconds">Hold para ligar (s)</label>
+                <input id="on_hold_seconds" data-key="on_hold_seconds" type="number" step="1" />
+              </div>
+              <div>
+                <label for="off_hold_seconds">Hold para desligar (s)</label>
+                <input id="off_hold_seconds" data-key="off_hold_seconds" type="number" step="1" />
+              </div>
+              <div>
+                <label for="reconcile_interval">Intervalo reconciliar (s)</label>
+                <input id="reconcile_interval" data-key="reconcile_interval" type="number" step="1" />
+              </div>
+              <div>
+                <label for="reconcile_retries">Tentativas</label>
+                <input id="reconcile_retries" data-key="reconcile_retries" type="number" step="1" />
+              </div>
+            </div>
+            <div class="check" style="margin-top: 12px">
+              <input id="timed_mode" type="checkbox" />
+              <label for="timed_mode">Modo cíclico (trabalho / descanso)</label>
+            </div>
+            <div class="grid" id="cycle-fields">
+              <div>
+                <label for="work_minutes">Minutos trabalhando</label>
+                <input id="work_minutes" data-key="work_minutes" type="number" step="any" />
+              </div>
+              <div>
+                <label for="rest_minutes">Minutos descanso</label>
+                <input id="rest_minutes" data-key="rest_minutes" type="number" step="any" />
+              </div>
+              <div>
+                <label for="failsafe_margin_minutes">Margem failsafe (min)</label>
+                <input id="failsafe_margin_minutes" data-key="failsafe_margin_minutes" type="number" step="any" />
+              </div>
+            </div>
+            <div class="actions">
+              <button type="button" id="btn-save-cycle">Salvar</button>
+            </div>
+          </section>
+
+          <section class="card" data-panel="alerts" hidden>
+            <h2>Notificações de nível</h2>
+            <p class="desc">Opcional — avisa quando o nível fica baixo.</p>
+            <div class="grid">
+              <div>
+                <label for="notify_service">Serviço notify (ex.: notify.mobile_app_xxx)</label>
+                <input id="notify_service" data-key="notify_service" type="text" placeholder="notify.…" />
+              </div>
+              <div>
+                <label for="low_level_percent">Alerta baixo (%)</label>
+                <input id="low_level_percent" data-key="low_level_percent" type="number" step="any" />
+              </div>
+              <div>
+                <label for="critical_level_percent">Alerta crítico (%)</label>
+                <input id="critical_level_percent" data-key="critical_level_percent" type="number" step="any" />
+              </div>
+              <div>
+                <label for="level_notify_hold_seconds">Hold notificação (s)</label>
+                <input id="level_notify_hold_seconds" data-key="level_notify_hold_seconds" type="number" step="1" />
+              </div>
+            </div>
+            <div class="actions">
+              <button type="button" id="btn-save-alerts">Salvar</button>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+    <script src="static/app.js"></script>
+  </body>
+</html>
