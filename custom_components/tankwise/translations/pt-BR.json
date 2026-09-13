@@ -83,6 +83,9 @@
   },
   "entity": {
     "switch": {
+      "controller": {
+        "name": "Controle"
+      },
       "demand": {
         "name": "Demanda"
       }
@@ -145,6 +148,26 @@
         "entry_id": {
           "name": "ID da entrada",
           "description": "Opcional quando existe apenas uma instância do Tankwise."
+        }
+      }
+    },
+    "enable_controller": {
+      "name": "Ligar controle",
+      "description": "Liga o controle mestre do Tankwise.",
+      "fields": {
+        "entry_id": {
+          "name": "ID da entrada",
+          "description": "Opcional quando existe apenas uma instância."
+        }
+      }
+    },
+    "disable_controller": {
+      "name": "Desligar controle",
+      "description": "Desliga o controle mestre do Tankwise e força a bomba OFF.",
+      "fields": {
+        "entry_id": {
+          "name": "ID da entrada",
+          "description": "Opcional quando existe apenas uma instância."
         }
       }
     }

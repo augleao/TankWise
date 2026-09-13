@@ -83,6 +83,9 @@
   },
   "entity": {
     "switch": {
+      "controller": {
+        "name": "Controller"
+      },
       "demand": {
         "name": "Demand"
       }
@@ -141,6 +144,26 @@
     "reconcile_now": {
       "name": "Reconcile now",
       "description": "Run the stubborn executor immediately.",
+      "fields": {
+        "entry_id": {
+          "name": "Entry ID",
+          "description": "Optional when only one Tankwise instance exists."
+        }
+      }
+    },
+    "enable_controller": {
+      "name": "Enable controller",
+      "description": "Turn the Tankwise master controller ON.",
+      "fields": {
+        "entry_id": {
+          "name": "Entry ID",
+          "description": "Optional when only one Tankwise instance exists."
+        }
+      }
+    },
+    "disable_controller": {
+      "name": "Disable controller",
+      "description": "Turn the Tankwise master controller OFF and force the pump OFF.",
       "fields": {
         "entry_id": {
           "name": "Entry ID",

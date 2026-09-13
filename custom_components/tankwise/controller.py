@@ -26,6 +26,7 @@ from .const import (
     ATTR_ALLOWED,
     ATTR_CYCLE_PHASE,
     ATTR_DISTANCE,
+    ATTR_ENABLED,
     ATTR_LAST_ERROR,
     ATTR_PERCENT,
     ATTR_REASON,
@@ -62,6 +63,7 @@ from .const import (
     DEFAULT_WORK_MINUTES,
     DOMAIN,
     EVENT_DEMAND_CHANGED,
+    EVENT_ENABLED_CHANGED,
     EVENT_FAULT,
     EVENT_RECONCILE,
     PHASE_IDLE,
@@ -80,6 +82,7 @@ class TankwiseSnapshot:
     """Public snapshot published to entities."""
 
     desired_on: bool = False
+    enabled: bool = True
     pump_on: bool | None = None
     distance: float | None = None
     percent: float | None = None
@@ -109,6 +112,7 @@ class TankwiseController:
         self._store = Store(hass, STORAGE_VERSION, f"{STORAGE_KEY}_{entry_id}")
 
         self.desired_on: bool = False
+        self.enabled: bool = True
         self.cycle_phase: str = PHASE_IDLE
         self.reconcile_healthy: bool = True
         self.last_error: str | None = None
@@ -220,11 +224,15 @@ class TankwiseController:
     async def async_setup(self) -> None:
         """Load persisted demand and attach listeners."""
         data = await self._store.async_load()
-        if isinstance(data, dict) and "desired_on" in data:
-            self.desired_on = bool(data["desired_on"])
-            self.reason = str(data.get("reason", "restored"))
+        if isinstance(data, dict):
+            if "desired_on" in data:
+                self.desired_on = bool(data["desired_on"])
+                self.reason = str(data.get("reason", "restored"))
+            if "enabled" in data:
+                self.enabled = bool(data["enabled"])
             _LOGGER.info(
-                "Restored Tankwise demand=%s reason=%s",
+                "Restored Tankwise enabled=%s demand=%s reason=%s",
+                self.enabled,
                 self.desired_on,
                 self.reason,
             )
@@ -299,6 +307,7 @@ class TankwiseController:
         allowed = self._pump_allowed(distance)
         return TankwiseSnapshot(
             desired_on=self.desired_on,
+            enabled=self.enabled,
             pump_on=pump,
             distance=distance,
             percent=percent,
@@ -314,6 +323,7 @@ class TankwiseController:
                 ATTR_CYCLE_PHASE: self.cycle_phase,
                 ATTR_ALLOWED: allowed,
                 ATTR_LAST_ERROR: self.last_error,
+                ATTR_ENABLED: self.enabled,
             },
         )
 
@@ -326,6 +336,12 @@ class TankwiseController:
         force: bool = False,
     ) -> None:
         """Set persisted desired demand and reconcile."""
+        if desired_on and not self.enabled:
+            _LOGGER.info(
+                "Ignoring demand ON — Tankwise controller is disabled (%s)", reason
+            )
+            return
+
         if desired_on and not force:
             distance = parse_float(self.hass.states.get(self.distance_entity))
             if distance is not None and distance >= self.off_threshold:
@@ -369,9 +385,39 @@ class TankwiseController:
         """Toggle desired demand."""
         await self.async_set_demand(not self.desired_on, reason=reason)
 
+    async def async_set_enabled(self, enabled: bool, *, reason: str = "ui") -> None:
+        """Enable or disable automatic pump control (master kill switch)."""
+        if enabled == self.enabled:
+            self._notify_listeners()
+            return
+
+        self.enabled = enabled
+        self.reason = "controller_enabled" if enabled else "controller_disabled"
+        await self._async_persist()
+        self.hass.bus.async_fire(
+            EVENT_ENABLED_CHANGED,
+            {
+                "entry_id": self.entry_id,
+                "enabled": self.enabled,
+                "reason": reason,
+            },
+        )
+        _LOGGER.warning(
+            "Tankwise controller %s (%s)",
+            "ENABLED" if enabled else "DISABLED",
+            reason,
+        )
+        # When disabled, force pump OFF immediately and freeze automation.
+        await self.async_reconcile(reason=f"enabled:{reason}")
+        self._notify_listeners()
+
     async def _async_persist(self) -> None:
         await self._store.async_save(
-            {"desired_on": self.desired_on, "reason": self.reason}
+            {
+                "desired_on": self.desired_on,
+                "enabled": self.enabled,
+                "reason": self.reason,
+            }
         )
 
     # ------------------------------------------------------------------ events
@@ -422,6 +468,11 @@ class TankwiseController:
 
     # ------------------------------------------------------------------ level / hysteresis
     async def _async_evaluate_level(self) -> None:
+        if not self.enabled:
+            self._on_condition_since = None
+            self._off_condition_since = None
+            return
+
         distance = parse_float(self.hass.states.get(self.distance_entity))
         if distance is None:
             self._on_condition_since = None
@@ -556,6 +607,8 @@ class TankwiseController:
                 )
 
     def _pump_allowed(self, distance: float | None) -> bool:
+        if not self.enabled:
+            return False
         if not self.desired_on:
             return False
         if distance is not None and distance >= self.off_threshold:

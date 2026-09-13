@@ -58,16 +58,20 @@ ATTR_PERCENT: Final = "percent"
 ATTR_CYCLE_PHASE: Final = "cycle_phase"
 ATTR_ALLOWED: Final = "allowed"
 ATTR_LAST_ERROR: Final = "last_error"
+ATTR_ENABLED: Final = "enabled"
 
 EVENT_DEMAND_CHANGED: Final = f"{DOMAIN}_demand_changed"
 EVENT_RECONCILE: Final = f"{DOMAIN}_reconcile"
 EVENT_FAULT: Final = f"{DOMAIN}_fault"
+EVENT_ENABLED_CHANGED: Final = f"{DOMAIN}_enabled_changed"
 
 # Services
 SERVICE_TURN_ON_DEMAND: Final = "turn_on_demand"
 SERVICE_TURN_OFF_DEMAND: Final = "turn_off_demand"
 SERVICE_TOGGLE_DEMAND: Final = "toggle_demand"
 SERVICE_RECONCILE_NOW: Final = "reconcile_now"
+SERVICE_ENABLE_CONTROLLER: Final = "enable_controller"
+SERVICE_DISABLE_CONTROLLER: Final = "disable_controller"
 
 # Cycle phases
 PHASE_IDLE: Final = "idle"

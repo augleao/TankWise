@@ -13,6 +13,8 @@ import voluptuous as vol
 
 from .const import (
     DOMAIN,
+    SERVICE_DISABLE_CONTROLLER,
+    SERVICE_ENABLE_CONTROLLER,
     SERVICE_RECONCILE_NOW,
     SERVICE_TOGGLE_DEMAND,
     SERVICE_TURN_OFF_DEMAND,
@@ -72,6 +74,16 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         if controller:
             await controller.async_reconcile(reason="service_reconcile")
 
+    async def handle_enable(call: ServiceCall) -> None:
+        controller = await _resolve_controller(call)
+        if controller:
+            await controller.async_set_enabled(True, reason="service_enable")
+
+    async def handle_disable(call: ServiceCall) -> None:
+        controller = await _resolve_controller(call)
+        if controller:
+            await controller.async_set_enabled(False, reason="service_disable")
+
     service_schema = vol.Schema({vol.Optional("entry_id"): cv.string})
     hass.services.async_register(
         DOMAIN, SERVICE_TURN_ON_DEMAND, handle_turn_on, schema=service_schema
@@ -84,6 +96,12 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     )
     hass.services.async_register(
         DOMAIN, SERVICE_RECONCILE_NOW, handle_reconcile, schema=service_schema
+    )
+    hass.services.async_register(
+        DOMAIN, SERVICE_ENABLE_CONTROLLER, handle_enable, schema=service_schema
+    )
+    hass.services.async_register(
+        DOMAIN, SERVICE_DISABLE_CONTROLLER, handle_disable, schema=service_schema
     )
     return True
 

@@ -42,3 +42,25 @@ reconcile_now:
       required: false
       selector:
         text:
+
+enable_controller:
+  name: Enable controller
+  description: Re-enable Tankwise automatic control (master switch ON).
+  fields:
+    entry_id:
+      name: Entry ID
+      description: Optional config entry id when multiple Tankwise instances exist.
+      required: false
+      selector:
+        text:
+
+disable_controller:
+  name: Disable controller
+  description: Disable Tankwise control and force the physical pump OFF (master kill switch).
+  fields:
+    entry_id:
+      name: Entry ID
+      description: Optional config entry id when multiple Tankwise instances exist.
+      required: false
+      selector:
+        text:
