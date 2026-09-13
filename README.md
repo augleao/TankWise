@@ -68,6 +68,20 @@ Use it to:
 
 Day-to-day tuning should happen in this panel. The initial config flow is a short setup; **Configure** on the integration entry remains available as a fallback.
 
+## Configuration panel
+
+After install, open **Tankwise** in the Home Assistant **sidebar** (not only the device page).
+
+The sidebar dashboard (add-on style) lets you:
+
+- See live tank level graphics and pump status
+- Pick pump / distance / toggle / LED entities
+- Set calibration, hysteresis, and work/rest timing
+- Manually set demand ON/OFF (persisted “environment variable” 1/0)
+- Enable/disable the master controller and force reconcile
+
+Day-to-day tuning should happen in this panel. The initial config flow is a short setup; **Configure** on the integration entry remains available as a fallback.
+
 ## Config flow overview
 
 | Step | What you configure |
