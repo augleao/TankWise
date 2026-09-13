@@ -2,48 +2,21 @@
   "config": {
     "step": {
       "user": {
-        "title": "Bomba e caixa",
-        "description": "Escolha o switch da bomba e o sensor de distância. Menor distância = tanque mais cheio. Distância de vazio deve ser maior que a de cheio. Para ultrassom em metros use por exemplo 0.25 (cheio) e 0.47 (vazio).",
+        "title": "Configuração do Tankwise",
+        "description": "Informe os entity_id da bomba e do sensor de distância (ex.: switch.bomba e sensor.caixa_distance). Menor distância = tanque mais cheio. Distância de vazio deve ser maior que a de cheio. Para ultrassom use 0.25 (cheio) e 0.47 (vazio). Depois da instalação, abra o painel Tankwise na barra lateral para ajustar o resto.",
         "data": {
           "name": "Nome",
-          "pump_entity": "Switch da bomba",
-          "distance_entity": "Sensor de distância",
+          "pump_entity": "Entity ID da bomba",
+          "distance_entity": "Entity ID do sensor de distância",
           "full_distance": "Distância tanque cheio",
           "empty_distance": "Distância tanque vazio",
           "expose_percentage": "Expor sensor de nível em %"
         },
         "data_description": {
-          "pump_entity": "Entidade que liga/desliga a bomba do poço.",
-          "distance_entity": "Sensor numérico de distância até a água (não o sensor de %).",
+          "pump_entity": "entity_id exato do switch que liga/desliga a bomba.",
+          "distance_entity": "entity_id exato do sensor numérico de distância até a água (não o de %).",
           "full_distance": "Distância com tanque cheio (número menor).",
           "empty_distance": "Distância com tanque vazio (número maior)."
-        }
-      },
-      "automation": {
-        "title": "Histerese e reconciliador",
-        "description": "Limiares sugeridos pela calibração: ligar ≈ {sug_on}, desligar ≈ {sug_off} (cheio={full}, vazio={empty}). A demanda liga abaixo do limiar de ligar e desliga acima do limiar de desligar após o tempo de confirmação.",
-        "data": {
-          "on_threshold": "Limiar para ligar",
-          "off_threshold": "Limiar para desligar",
-          "on_hold_seconds": "Tempo de confirmação para ligar",
-          "off_hold_seconds": "Tempo de confirmação para desligar",
-          "reconcile_interval": "Intervalo de reconciliação",
-          "reconcile_retries": "Tentativas de reconciliação"
-        }
-      },
-      "extras": {
-        "title": "Recursos opcionais",
-        "description": "Ciclo trabalho/descanso (descanso=0 = contínuo), botões físicos, LEDs e notificações. Deixe entidades opcionais vazias se não usar.",
-        "data": {
-          "work_minutes": "Minutos de trabalho",
-          "rest_minutes": "Minutos de descanso",
-          "failsafe_margin_minutes": "Margem do failsafe cíclico",
-          "toggle_entities": "Entradas de toggle físico",
-          "led_entities": "Switches de LED",
-          "notify_service": "Serviço notify (ex.: notify.mobile_app_phone)",
-          "low_level_percent": "Notificação de nível baixo %",
-          "critical_level_percent": "Notificação de nível crítico %",
-          "level_notify_hold_seconds": "Tempo de confirmação da notificação"
         }
       }
     },
@@ -58,51 +31,19 @@
   "options": {
     "step": {
       "init": {
-        "title": "Configurações do Tankwise"
-      },
-      "calibration": {
-        "title": "Calibração",
-        "description": "Distâncias cheio/vazio e sensor de porcentagem.",
+        "title": "Opções do Tankwise",
+        "description": "Limiares básicos. Prefira o painel Tankwise na barra lateral para a configuração completa.",
         "data": {
           "full_distance": "Distância tanque cheio",
           "empty_distance": "Distância tanque vazio",
-          "expose_percentage": "Expor sensor de nível em %"
-        }
-      },
-      "automation": {
-        "title": "Automação",
-        "description": "Limiares de histerese e reconciliador.",
-        "data": {
           "on_threshold": "Limiar para ligar",
           "off_threshold": "Limiar para desligar",
           "on_hold_seconds": "Tempo de confirmação para ligar",
           "off_hold_seconds": "Tempo de confirmação para desligar",
           "reconcile_interval": "Intervalo de reconciliação",
-          "reconcile_retries": "Tentativas de reconciliação"
-        }
-      },
-      "cycle": {
-        "title": "Ciclo trabalho / descanso",
-        "data": {
           "work_minutes": "Minutos de trabalho",
           "rest_minutes": "Minutos de descanso",
-          "failsafe_margin_minutes": "Margem do failsafe cíclico"
-        }
-      },
-      "hardware": {
-        "title": "Toggles e LEDs",
-        "data": {
-          "toggle_entities": "Entradas de toggle físico",
-          "led_entities": "Switches de LED"
-        }
-      },
-      "alerts": {
-        "title": "Notificações",
-        "data": {
-          "notify_service": "Serviço notify",
-          "low_level_percent": "Notificação de nível baixo %",
-          "critical_level_percent": "Notificação de nível crítico %",
-          "level_notify_hold_seconds": "Tempo de confirmação da notificação"
+          "notify_service": "Serviço notify"
         }
       }
     },

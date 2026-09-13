@@ -2,48 +2,21 @@
   "config": {
     "step": {
       "user": {
-        "title": "Pump and tank",
-        "description": "Choose the pump switch and the distance sensor. Lower distance = fuller tank. Empty distance must be greater than full distance. For ultrasonic meters use values like 0.25 (full) and 0.47 (empty).",
+        "title": "Tankwise setup",
+        "description": "Enter the pump and distance entity IDs (e.g. switch.pump and sensor.tank_distance). Lower distance = fuller tank. Empty distance must be greater than full. For ultrasonic meters use values like 0.25 (full) and 0.47 (empty). After install, open the Tankwise sidebar panel to finish tuning.",
         "data": {
           "name": "Name",
-          "pump_entity": "Pump switch",
-          "distance_entity": "Distance sensor",
+          "pump_entity": "Pump entity ID",
+          "distance_entity": "Distance sensor entity ID",
           "full_distance": "Full tank distance",
           "empty_distance": "Empty tank distance",
           "expose_percentage": "Expose percentage level sensor"
         },
         "data_description": {
-          "pump_entity": "Entity that turns the well pump on/off.",
-          "distance_entity": "Numeric distance-to-water sensor (not the % sensor).",
+          "pump_entity": "Exact entity_id of the switch that turns the well pump on/off.",
+          "distance_entity": "Exact entity_id of the numeric distance-to-water sensor (not the % sensor).",
           "full_distance": "Distance when the tank is full (smaller number).",
           "empty_distance": "Distance when the tank is empty (larger number)."
-        }
-      },
-      "automation": {
-        "title": "Hysteresis and reconciler",
-        "description": "Suggested thresholds from your calibration: on ≈ {sug_on}, off ≈ {sug_off} (full={full}, empty={empty}). Demand turns ON below the on threshold and OFF above the off threshold after the hold times.",
-        "data": {
-          "on_threshold": "Turn-on distance threshold",
-          "off_threshold": "Turn-off distance threshold",
-          "on_hold_seconds": "Turn-on hold time",
-          "off_hold_seconds": "Turn-off hold time",
-          "reconcile_interval": "Reconcile interval",
-          "reconcile_retries": "Reconcile retries"
-        }
-      },
-      "extras": {
-        "title": "Optional features",
-        "description": "Work/rest cycle (rest=0 = continuous), physical toggles, LED mirrors, and notifications. Leave optional entity fields empty if unused.",
-        "data": {
-          "work_minutes": "Work minutes",
-          "rest_minutes": "Rest minutes",
-          "failsafe_margin_minutes": "Cyclic failsafe margin",
-          "toggle_entities": "Physical toggle inputs",
-          "led_entities": "LED feedback switches",
-          "notify_service": "Notify service (e.g. notify.mobile_app_phone)",
-          "low_level_percent": "Low level notification %",
-          "critical_level_percent": "Critical level notification %",
-          "level_notify_hold_seconds": "Level notification hold"
         }
       }
     },
@@ -58,51 +31,19 @@
   "options": {
     "step": {
       "init": {
-        "title": "Tankwise settings"
-      },
-      "calibration": {
-        "title": "Calibration",
-        "description": "Full/empty distances and percentage sensor.",
+        "title": "Tankwise options",
+        "description": "Basic thresholds. Prefer the Tankwise sidebar panel for full graphical setup.",
         "data": {
           "full_distance": "Full tank distance",
           "empty_distance": "Empty tank distance",
-          "expose_percentage": "Expose percentage level sensor"
-        }
-      },
-      "automation": {
-        "title": "Automation",
-        "description": "Hysteresis thresholds and reconciler.",
-        "data": {
           "on_threshold": "Turn-on distance threshold",
           "off_threshold": "Turn-off distance threshold",
           "on_hold_seconds": "Turn-on hold time",
           "off_hold_seconds": "Turn-off hold time",
           "reconcile_interval": "Reconcile interval",
-          "reconcile_retries": "Reconcile retries"
-        }
-      },
-      "cycle": {
-        "title": "Work / rest cycle",
-        "data": {
           "work_minutes": "Work minutes",
           "rest_minutes": "Rest minutes",
-          "failsafe_margin_minutes": "Cyclic failsafe margin"
-        }
-      },
-      "hardware": {
-        "title": "Toggles and LEDs",
-        "data": {
-          "toggle_entities": "Physical toggle inputs",
-          "led_entities": "LED feedback switches"
-        }
-      },
-      "alerts": {
-        "title": "Notifications",
-        "data": {
-          "notify_service": "Notify service",
-          "low_level_percent": "Low level notification %",
-          "critical_level_percent": "Critical level notification %",
-          "level_notify_hold_seconds": "Level notification hold"
+          "notify_service": "Notify service"
         }
       }
     },
@@ -113,31 +54,17 @@
   },
   "entity": {
     "switch": {
-      "controller": {
-        "name": "Controller"
-      },
-      "demand": {
-        "name": "Demand"
-      }
+      "controller": { "name": "Controller" },
+      "demand": { "name": "Demand" }
     },
     "sensor": {
-      "tank_level": {
-        "name": "Tank level"
-      },
-      "tank_distance": {
-        "name": "Tank distance"
-      },
-      "cycle_phase": {
-        "name": "Cycle phase"
-      }
+      "tank_level": { "name": "Tank level" },
+      "tank_distance": { "name": "Tank distance" },
+      "cycle_phase": { "name": "Cycle phase" }
     },
     "binary_sensor": {
-      "pump_running": {
-        "name": "Pump running"
-      },
-      "reconcile_fault": {
-        "name": "Reconcile fault"
-      }
+      "pump_running": { "name": "Pump running" },
+      "reconcile_fault": { "name": "Reconcile fault" }
     }
   },
   "services": {
