@@ -19,33 +19,6 @@
           "empty_distance": "Distância com tanque vazio (número maior)."
         }
       },
-      "hysteresis": {
-        "title": "Hysteresis & reconcile",
-        "description": "Demand turns ON when distance stays below the on threshold for the hold time. Demand turns OFF when distance stays above the off threshold (or immediately for high-level safety).",
-        "data": {
-          "on_threshold": "Turn-on distance threshold",
-          "off_threshold": "Turn-off distance threshold",
-          "on_hold_seconds": "Turn-on hold time",
-          "off_hold_seconds": "Turn-off hold time",
-          "reconcile_interval": "Reconcile interval"
-        }
-      },
-      "optional": {
-        "title": "Optional features",
-        "description": "Work/rest cycle (rest=0 means continuous), physical toggles, LED mirrors, and notifications. Leave notify blank to disable.",
-        "data": {
-          "work_minutes": "Work minutes",
-          "rest_minutes": "Rest minutes",
-          "failsafe_margin_minutes": "Cyclic failsafe margin",
-          "toggle_entities": "Physical toggle inputs",
-          "led_entities": "LED feedback switches",
-          "notify_service": "Notify service (e.g. notify.mobile_app_phone)",
-          "low_level_percent": "Low level notification %",
-          "critical_level_percent": "Critical level notification %",
-          "level_notify_hold_seconds": "Level notification hold",
-          "reconcile_retries": "Reconcile retries"
-        }
-      },
       "automation": {
         "title": "Histerese e reconciliador",
         "description": "Limiares sugeridos pela calibração: ligar ≈ {sug_on}, desligar ≈ {sug_off} (cheio={full}, vazio={empty}). A demanda liga abaixo do limiar de ligar e desliga acima do limiar de desligar após o tempo de confirmação.",
@@ -85,28 +58,7 @@
   "options": {
     "step": {
       "init": {
-        "title": "Configurações do Tankwise",
-        "description": "Update calibration, hysteresis, cycle, toggles, LEDs, and notifications.",
-        "data": {
-          "full_distance": "Full tank distance",
-          "empty_distance": "Empty tank distance",
-          "expose_percentage": "Expose percentage level sensor",
-          "on_threshold": "Turn-on distance threshold",
-          "off_threshold": "Turn-off distance threshold",
-          "on_hold_seconds": "Turn-on hold time",
-          "off_hold_seconds": "Turn-off hold time",
-          "reconcile_interval": "Reconcile interval",
-          "work_minutes": "Work minutes",
-          "rest_minutes": "Rest minutes",
-          "failsafe_margin_minutes": "Cyclic failsafe margin",
-          "toggle_entities": "Physical toggle inputs",
-          "led_entities": "LED feedback switches",
-          "notify_service": "Notify service",
-          "low_level_percent": "Low level notification %",
-          "critical_level_percent": "Critical level notification %",
-          "level_notify_hold_seconds": "Level notification hold",
-          "reconcile_retries": "Reconcile retries"
-        }
+        "title": "Configurações do Tankwise"
       },
       "calibration": {
         "title": "Calibração",
@@ -162,7 +114,7 @@
   "entity": {
     "switch": {
       "controller": {
-        "name": "Controle"
+        "name": "Controlador"
       },
       "demand": {
         "name": "Demanda"
@@ -195,7 +147,7 @@
       "fields": {
         "entry_id": {
           "name": "ID da entrada",
-          "description": "Opcional quando existe apenas uma instância."
+          "description": "Opcional quando há só uma instalação Tankwise."
         }
       }
     },
@@ -205,7 +157,7 @@
       "fields": {
         "entry_id": {
           "name": "ID da entrada",
-          "description": "Opcional quando existe apenas uma instância."
+          "description": "Opcional quando há só uma instalação Tankwise."
         }
       }
     },
@@ -215,7 +167,7 @@
       "fields": {
         "entry_id": {
           "name": "ID da entrada",
-          "description": "Opcional quando existe apenas uma instância."
+          "description": "Opcional quando há só uma instalação Tankwise."
         }
       }
     },
@@ -225,27 +177,27 @@
       "fields": {
         "entry_id": {
           "name": "ID da entrada",
-          "description": "Opcional quando existe apenas uma instância."
+          "description": "Opcional quando há só uma instalação Tankwise."
         }
       }
     },
     "enable_controller": {
-      "name": "Ligar controle",
-      "description": "Liga o controle mestre do Tankwise.",
+      "name": "Ativar controlador",
+      "description": "Liga o controlador mestre do Tankwise.",
       "fields": {
         "entry_id": {
           "name": "ID da entrada",
-          "description": "Opcional quando existe apenas uma instância."
+          "description": "Opcional quando há só uma instalação Tankwise."
         }
       }
     },
     "disable_controller": {
-      "name": "Desligar controle",
-      "description": "Desliga o controle mestre do Tankwise e força a bomba OFF.",
+      "name": "Desativar controlador",
+      "description": "Desliga o controlador mestre e força a bomba OFF.",
       "fields": {
         "entry_id": {
           "name": "ID da entrada",
-          "description": "Opcional quando existe apenas uma instância."
+          "description": "Opcional quando há só uma instalação Tankwise."
         }
       }
     }
