@@ -1,0 +1,44 @@
+# Service calls for Tankwise
+turn_on_demand:
+  name: Turn on demand
+  description: Set the Tankwise desired demand to ON (reconciler will start the pump if allowed).
+  fields:
+    entry_id:
+      name: Entry ID
+      description: Optional config entry id when multiple Tankwise instances exist.
+      required: false
+      selector:
+        text:
+
+turn_off_demand:
+  name: Turn off demand
+  description: Set the Tankwise desired demand to OFF and stop the pump.
+  fields:
+    entry_id:
+      name: Entry ID
+      description: Optional config entry id when multiple Tankwise instances exist.
+      required: false
+      selector:
+        text:
+
+toggle_demand:
+  name: Toggle demand
+  description: Toggle the Tankwise desired demand.
+  fields:
+    entry_id:
+      name: Entry ID
+      description: Optional config entry id when multiple Tankwise instances exist.
+      required: false
+      selector:
+        text:
+
+reconcile_now:
+  name: Reconcile now
+  description: Immediately reconcile the physical pump switch with desired demand and safety rules.
+  fields:
+    entry_id:
+      name: Entry ID
+      description: Optional config entry id when multiple Tankwise instances exist.
+      required: false
+      selector:
+        text:
