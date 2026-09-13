@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - 2026-03-22
+
+### Fixed
+
+- Sidebar panel registration so **Tankwise** appears in the left menu (not only the device page)
+- Hard-depend on `frontend` / `panel_custom` and retry panel setup on config entry load
+- Use `frontend.async_register_built_in_panel` with keyword args for newer Home Assistant cores
+
 ## [0.3.0] - 2026-03-22
 
 ### Added

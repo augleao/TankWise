@@ -51,7 +51,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         await async_register_panel(hass)
     except Exception:  # noqa: BLE001
         _LOGGER.exception(
-            "Tankwise sidebar panel failed to register; config flow still works"
+            "Tankwise sidebar panel failed during domain setup; will retry on entry setup"
         )
 
     from .controller import TankwiseController
@@ -130,6 +130,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Tankwise from a config entry."""
     from .controller import TankwiseController
     from .helpers import merge_entry_config
+    from .panel import async_register_panel, is_panel_registered
+
+    # Ensure sidebar panel exists even if domain setup ran before frontend.
+    if not is_panel_registered():
+        try:
+            await async_register_panel(hass)
+        except Exception:  # noqa: BLE001
+            _LOGGER.exception("Tankwise sidebar panel retry failed on entry setup")
 
     hass.data.setdefault(DOMAIN, {})
     config = merge_entry_config(dict(entry.data), dict(entry.options))
