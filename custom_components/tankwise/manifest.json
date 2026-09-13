@@ -1,6 +1,10 @@
 {
   "domain": "tankwise",
   "name": "Tankwise",
+  "after_dependencies": [
+    "frontend",
+    "panel_custom"
+  ],
   "codeowners": [
     "@augleao"
   ],
@@ -8,10 +12,6 @@
   "dependencies": [
     "http",
     "websocket_api"
-  ],
-  "after_dependencies": [
-    "frontend",
-    "panel_custom"
   ],
   "documentation": "https://github.com/augleao/TankWise",
   "integration_type": "device",
