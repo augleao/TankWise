@@ -22,7 +22,7 @@
     },
     "error": {
       "empty_must_be_greater": "A distância de vazio deve ser maior que a de cheio.",
-      "off_must_be_greater": "O limiar de desligar deve ser maior que o de ligar."
+      "on_must_be_greater": "O limiar de ligar deve ser maior que o de desligar (distância maior = caixa mais vazia)."
     },
     "abort": {
       "already_configured": "Este par bomba/sensor já está configurado."
@@ -49,7 +49,7 @@
     },
     "error": {
       "empty_must_be_greater": "A distância de vazio deve ser maior que a de cheio.",
-      "off_must_be_greater": "O limiar de desligar deve ser maior que o de ligar."
+      "on_must_be_greater": "O limiar de ligar deve ser maior que o de desligar (distância maior = caixa mais vazia)."
     }
   },
   "entity": {

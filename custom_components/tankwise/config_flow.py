@@ -56,8 +56,8 @@ def _defaults_from_calibration(full: float, empty: float) -> dict[str, Any]:
         CONF_FULL_DISTANCE: full,
         CONF_EMPTY_DISTANCE: empty,
         CONF_EXPOSE_PERCENTAGE: DEFAULT_EXPOSE_PERCENTAGE,
-        CONF_ON_THRESHOLD: round(full + span * 0.05, 3),
-        CONF_OFF_THRESHOLD: round(full + span * 0.70, 3),
+        CONF_ON_THRESHOLD: round(full + span * 0.70, 3),
+        CONF_OFF_THRESHOLD: round(full + span * 0.05, 3),
         CONF_ON_HOLD_SECONDS: DEFAULT_ON_HOLD_SECONDS,
         CONF_OFF_HOLD_SECONDS: DEFAULT_OFF_HOLD_SECONDS,
         CONF_RECONCILE_INTERVAL: DEFAULT_RECONCILE_INTERVAL,
@@ -171,8 +171,8 @@ class TankwiseOptionsFlow(config_entries.OptionsFlow):
             off_th = float(user_input[CONF_OFF_THRESHOLD])
             if empty <= full:
                 errors["base"] = "empty_must_be_greater"
-            elif off_th <= on_th:
-                errors["base"] = "off_must_be_greater"
+            elif on_th <= off_th:
+                errors["base"] = "on_must_be_greater"
             else:
                 return self.async_create_entry(title="", data=user_input)
 

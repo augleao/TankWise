@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 import logging
 from typing import Any
 
@@ -37,6 +40,18 @@ from .const import (
 from .helpers import merge_entry_config
 
 _LOGGER = logging.getLogger(__name__)
+
+
+
+def integration_version() -> str:
+    try:
+        manifest = json.loads(
+            (Path(__file__).with_name("manifest.json")).read_text(encoding="utf-8")
+        )
+        return str(manifest.get("version", "?"))
+    except Exception:  # noqa: BLE001
+        return "?"
+
 
 DATA_KEYS = {
     CONF_PUMP_ENTITY,
@@ -131,6 +146,7 @@ def entry_payload(hass: HomeAssistant, entry: ConfigEntry) -> dict[str, Any]:
     return {
         "entry_id": entry.entry_id,
         "title": entry.title,
+        "version": integration_version(),
         "config": config,
         "status": status,
     }
@@ -175,8 +191,8 @@ async def apply_config_updates(
 
     if float(merged[CONF_EMPTY_DISTANCE]) <= float(merged[CONF_FULL_DISTANCE]):
         raise vol.Invalid("Empty distance must be greater than full distance")
-    if float(merged[CONF_OFF_THRESHOLD]) <= float(merged[CONF_ON_THRESHOLD]):
-        raise vol.Invalid("Off threshold must be greater than on threshold")
+    if float(merged[CONF_ON_THRESHOLD]) <= float(merged[CONF_OFF_THRESHOLD]):
+        raise vol.Invalid("On threshold must be greater than off threshold (ligar > desligar: distância maior = mais vazio)")
 
     new_data = dict(entry.data)
     new_options = dict(entry.options)

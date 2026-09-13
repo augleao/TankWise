@@ -148,6 +148,26 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     hass.data.setdefault(DOMAIN, {})
     config = merge_entry_config(dict(entry.data), dict(entry.options))
+
+    # Migrate inverted thresholds from older builds (on < off).
+    # Correct ultrasonic semantics: on_threshold > off_threshold.
+    try:
+        on_th = float(config.get("on_threshold", 0))
+        off_th = float(config.get("off_threshold", 0))
+        if on_th and off_th and on_th < off_th:
+            _LOGGER.warning(
+                "Tankwise migrating inverted thresholds on=%s off=%s -> swapped",
+                on_th,
+                off_th,
+            )
+            new_options = dict(entry.options)
+            new_options["on_threshold"] = off_th
+            new_options["off_threshold"] = on_th
+            hass.config_entries.async_update_entry(entry, options=new_options)
+            config = merge_entry_config(dict(entry.data), dict(entry.options))
+    except (TypeError, ValueError):
+        pass
+
     controller = TankwiseController(hass, entry.entry_id, config)
     await controller.async_setup()
 

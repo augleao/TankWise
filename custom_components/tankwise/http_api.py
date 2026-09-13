@@ -160,6 +160,36 @@ class TankwiseEntitiesView(HomeAssistantView):
         return self.json({"entities": api_common.list_picker_entities(hass)})
 
 
+
+
+class TankwiseLogsView(HomeAssistantView):
+    """Return recent controller event logs."""
+
+    url = "/api/tankwise/entries/{entry_id}/logs"
+    name = "api:tankwise:logs"
+    requires_auth = True
+
+    async def get(self, request: web.Request, entry_id: str) -> web.Response:
+        hass: HomeAssistant = request.app["hass"]
+        entry = api_common.resolve_entry(hass, entry_id)
+        if entry is None:
+            return self.json_message("Tankwise entry not found", HTTPStatus.NOT_FOUND)
+        controller = api_common.get_controller(hass, entry)
+        if controller is None:
+            return self.json_message("Controller not ready", HTTPStatus.SERVICE_UNAVAILABLE)
+        try:
+            limit = int(request.query.get("limit", "50"))
+        except ValueError:
+            limit = 50
+        return self.json(
+            {
+                "entry_id": entry.entry_id,
+                "logs": controller.recent_logs(limit),
+                "status": api_common.entry_payload(hass, entry)["status"],
+            }
+        )
+
+
 @callback
 def async_register_http(hass: HomeAssistant) -> None:
     """Register Tankwise HTTP views."""
@@ -170,4 +200,5 @@ def async_register_http(hass: HomeAssistant) -> None:
     hass.http.register_view(TankwiseDemandView)
     hass.http.register_view(TankwiseReconcileView)
     hass.http.register_view(TankwiseEntitiesView)
+    hass.http.register_view(TankwiseLogsView)
     _LOGGER.debug("Tankwise HTTP API registered")

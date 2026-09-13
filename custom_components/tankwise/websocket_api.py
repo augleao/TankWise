@@ -160,6 +160,41 @@ async def websocket_reconcile(
     connection.send_result(msg["id"], api_common.entry_payload(hass, entry))
 
 
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): f"{DOMAIN}/logs",
+        vol.Optional("entry_id"): str,
+        vol.Optional("limit"): int,
+    }
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def websocket_logs(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    entry = api_common.resolve_entry(hass, msg.get("entry_id"))
+    if entry is None:
+        connection.send_error(msg["id"], "not_found", "Tankwise entry not found")
+        return
+    controller = api_common.get_controller(hass, entry)
+    if controller is None:
+        connection.send_error(msg["id"], "not_ready", "Controller not ready")
+        return
+    limit = int(msg.get("limit") or 50)
+    connection.send_result(
+        msg["id"],
+        {
+            "entry_id": entry.entry_id,
+            "logs": controller.recent_logs(limit),
+            "status": api_common.entry_payload(hass, entry)["status"],
+        },
+    )
+
+
 def async_register_websockets(hass: HomeAssistant) -> None:
     """Register Tankwise websocket commands."""
     websocket_api.async_register_command(hass, websocket_list)
@@ -168,3 +203,4 @@ def async_register_websockets(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, websocket_set_enabled)
     websocket_api.async_register_command(hass, websocket_set_demand)
     websocket_api.async_register_command(hass, websocket_reconcile)
+    websocket_api.async_register_command(hass, websocket_logs)

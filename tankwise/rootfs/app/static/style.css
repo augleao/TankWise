@@ -320,3 +320,9 @@ button:disabled {
 [hidden] {
   display: none !important;
 }
+
+.ver { font-size: 0.95rem; font-weight: 600; color: var(--tw-muted); margin-left: 6px; }
+.log-box { max-height: 420px; overflow: auto; border: 1px solid var(--tw-border); border-radius: 12px; background: #f7faf8; margin-top: 12px; }
+.log-row { display: grid; grid-template-columns: 160px 160px 1fr; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--tw-border); font-size: 0.82rem; }
+.log-ts { color: var(--tw-muted); font-family: ui-monospace, monospace; }
+.log-ev { font-weight: 700; color: var(--tw-green-dark); }

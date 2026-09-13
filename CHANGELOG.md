@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1] - 2026-03-22
+
+### Fixed
+- Ultrasonic hysteresis polarity: turn **ON** when distance stays above the on-threshold (emptier), turn **OFF** when below the off-threshold (fuller)
+- Full-tank safety now uses low distance (`<= off`), not high distance
+- Auto-migrate inverted thresholds (`on < off`) by swapping them on setup
+
+### Added
+- **Logs** tab in the sidebar panel / add-on UI (recent controller events)
+- Version badge next to the Tankwise title
+- Clearer calibration hints (ligar > desligar)
+
 ## [0.4.0] - 2026-03-22
 
 ### Added

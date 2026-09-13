@@ -11,7 +11,7 @@
       <div class="wrap">
         <header class="hero">
           <div>
-            <h1>TankWise</h1>
+            <h1>TankWise <span id="version" class="ver"></span></h1>
             <p>Controle da bomba pelo nível da caixa d’água</p>
           </div>
           <div class="hero-right">
@@ -39,6 +39,7 @@
             <button type="button" class="tab" data-tab="config">Entidades</button>
             <button type="button" class="tab" data-tab="cycle">Ciclo / histerese</button>
             <button type="button" class="tab" data-tab="alerts">Alertas</button>
+            <button type="button" class="tab" data-tab="logs">Logs</button>
           </div>
 
           <section class="card" data-panel="monitor">
@@ -188,6 +189,15 @@
             <div class="actions">
               <button type="button" id="btn-save-alerts">Salvar</button>
             </div>
+          </section>
+
+          <section class="card" data-panel="logs" hidden>
+            <h2>Logs do controlador</h2>
+            <p class="desc">Eventos recentes de demanda, histerese e reconciliação.</p>
+            <div class="actions">
+              <button type="button" class="secondary" id="btn-refresh-logs">Atualizar logs</button>
+            </div>
+            <div class="log-box" id="logs"></div>
           </section>
         </div>
       </div>

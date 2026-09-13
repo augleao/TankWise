@@ -22,7 +22,9 @@ class TankwisePanel extends HTMLElement {
     this._busy = false;
     this._msg = "";
     this._err = "";
-    this._section = "monitor"; // monitor | config | cycle | alerts
+    this._section = "monitor"; // monitor | config | cycle | alerts | logs
+    this._version = "";
+    this._logs = [];
   }
 
   set hass(hass) {
@@ -84,6 +86,7 @@ class TankwisePanel extends HTMLElement {
         if (still) {
           this._config = { ...still.config };
           this._status = still.status;
+          this._version = still.version || this._version || "";
         } else {
           this._selected = this._entries[0]?.entry_id || null;
           if (this._selected) await this._loadConfig(this._selected);
@@ -94,6 +97,22 @@ class TankwisePanel extends HTMLElement {
       this._err = e.message || String(e);
     }
     this._render();
+  }
+
+
+  async _loadLogs() {
+    if (!this._selected) return;
+    try {
+      const res = await this._ws("tankwise/logs", {
+        entry_id: this._selected,
+        limit: 50,
+      });
+      this._logs = res.logs || [];
+      if (res.status) this._status = res.status;
+      this._err = "";
+    } catch (e) {
+      this._err = e.message || String(e);
+    }
   }
 
   async _loadConfig(entryId) {
@@ -362,6 +381,13 @@ class TankwisePanel extends HTMLElement {
           display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: center;
         }
         .hero h1 { margin: 0; font-size: 1.75rem; color: var(--tw-green-dark); letter-spacing: -0.02em; }
+        .ver { font-size: 0.95rem; font-weight: 600; color: var(--tw-muted); margin-left: 6px; }
+        .log-box { max-height: 420px; overflow: auto; border: 1px solid var(--tw-border); border-radius: 12px; background: #f7faf8; }
+        .log-row { display: grid; grid-template-columns: 160px 160px 1fr; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--tw-border); font-size: 0.82rem; }
+        .log-row:last-child { border-bottom: none; }
+        .log-ts { color: var(--tw-muted); font-family: ui-monospace, monospace; }
+        .log-ev { font-weight: 700; color: var(--tw-green-dark); }
+        .log-extra { color: #31463c; word-break: break-word; }
         .hero p { margin: 4px 0 0; color: var(--tw-muted); font-size: 0.95rem; }
         .badge {
           display: inline-flex; align-items: center; gap: 6px;
@@ -483,8 +509,9 @@ class TankwisePanel extends HTMLElement {
       };
     }
     root.querySelectorAll("[data-tab]").forEach((el) => {
-      el.onclick = () => {
+      el.onclick = async () => {
         this._section = el.getAttribute("data-tab");
+        if (this._section === "logs") await this._loadLogs();
         this._render();
       };
     });
@@ -499,6 +526,13 @@ class TankwisePanel extends HTMLElement {
     btn("demand_on", () => this._setDemand(true));
     btn("demand_off", () => this._setDemand(false));
     btn("reconcile", () => this._reconcile());
+    btn("refresh_logs", async () => {
+      this._busy = true;
+      this._render();
+      await this._loadLogs();
+      this._busy = false;
+      this._render();
+    });
   }
 
   _render() {
@@ -523,7 +557,7 @@ class TankwisePanel extends HTMLElement {
         <div class="wrap">
           <div class="hero">
             <div>
-              <h1>Tankwise</h1>
+              <h1>Tankwise <span class="ver">${this._esc(this._version || "")}</span></h1>
               <p>Controle amigável da bomba artesiana e da caixa d'água.</p>
             </div>
             <span class="badge ${enabled ? "ok" : "off"}">${enabled ? "Automação ativa" : "Automação desligada"}</span>
@@ -557,6 +591,7 @@ class TankwisePanel extends HTMLElement {
               <button class="tab ${sec === "config" ? "active" : ""}" data-tab="config" type="button">Entidades & calibração</button>
               <button class="tab ${sec === "cycle" ? "active" : ""}" data-tab="cycle" type="button">Temporização</button>
               <button class="tab ${sec === "alerts" ? "active" : ""}" data-tab="alerts" type="button">Alertas</button>
+              <button class="tab ${sec === "logs" ? "active" : ""}" data-tab="logs" type="button">Logs</button>
             </div>
           </div>
 
@@ -667,12 +702,14 @@ class TankwisePanel extends HTMLElement {
                 <input type="number" step="any" data-key="empty_distance" value="${this._esc(this._val("empty_distance", 0.47))}">
               </div>
               <div>
-                <label>Limiar ligar demanda</label>
+                <label>Limiar ligar demanda (distância ≥)</label>
                 <input type="number" step="any" data-key="on_threshold" value="${this._esc(this._val("on_threshold", 0.4))}">
+                <div class="hint">Liga quando a distância fica acima deste valor (caixa mais vazia). Deve ser maior que o limiar de desligar.</div>
               </div>
               <div>
-                <label>Limiar desligar demanda</label>
+                <label>Limiar desligar demanda (distância ≤)</label>
                 <input type="number" step="any" data-key="off_threshold" value="${this._esc(this._val("off_threshold", 0.28))}">
+                <div class="hint">Desliga quando a distância fica abaixo deste valor (caixa mais cheia).</div>
               </div>
               <div>
                 <label>Hold ligar (s)</label>

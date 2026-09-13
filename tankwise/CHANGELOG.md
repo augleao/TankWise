@@ -1,3 +1,9 @@
+## 1.0.1
+
+- Proxy de logs da integração
+- Exibe versão no título
+- Aba Logs
+
 # Changelog — TankWise Add-on
 
 ## 1.0.0

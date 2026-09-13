@@ -242,6 +242,23 @@ async def on_cleanup(app: web.Application) -> None:
     await app["session"].close()
 
 
+
+async def api_logs(request: web.Request) -> web.Response:
+    session: ClientSession = request.app["session"]
+    entry_id = request.match_info["entry_id"]
+    limit = request.rel_url.query.get("limit", "50")
+    status, data = await _ha(
+        session, "GET", f"/api/tankwise/entries/{entry_id}/logs?limit={limit}"
+    )
+    if status >= 400:
+        return _json_error(
+            (data or {}).get("message", f"HA API error {status}")
+            if isinstance(data, dict)
+            else f"HA API error {status}",
+            status=status,
+        )
+    return web.json_response(data)
+
 def create_app() -> web.Application:
     app = web.Application()
     app.on_startup.append(on_startup)
@@ -254,6 +271,7 @@ def create_app() -> web.Application:
     app.router.add_post("/api/entries/{entry_id}/enabled", api_enabled)
     app.router.add_post("/api/entries/{entry_id}/demand", api_demand)
     app.router.add_post("/api/entries/{entry_id}/reconcile", api_reconcile)
+    app.router.add_get("/api/entries/{entry_id}/logs", api_logs)
     app.router.add_get("/api/entities", api_entities)
 
     app.router.add_get("/", index)

@@ -270,6 +270,9 @@
 
   function applyEntry(entry) {
     state.selected = entry.entry_id;
+    state.version = entry.version || state.version || "";
+    const ver = $("version");
+    if (ver) ver.textContent = state.version ? `v${state.version}` : "";
     state.config = { ...entry.config };
     state.status = entry.status;
     $("empty-state").hidden = true;
@@ -363,6 +366,31 @@
     setBusy(false);
   }
 
+  async function loadLogs() {
+    if (!state.selected) return;
+    try {
+      const res = await api(`/entries/${state.selected}/logs?limit=50`);
+      const box = $("logs");
+      if (!box) return;
+      const rows = res.logs || [];
+      box.innerHTML = rows.length
+        ? rows
+            .map((row) => {
+              const ts = String(row.ts || "").replace("T", " ").replace("Z", "");
+              const ev = row.event || "";
+              const extra = Object.entries(row)
+                .filter(([k]) => !["ts", "event"].includes(k))
+                .map(([k, v]) => `${k}=${v}`)
+                .join(" · ");
+              return `<div class="log-row"><span class="log-ts">${ts}</span><span class="log-ev">${ev}</span><span>${extra}</span></div>`;
+            })
+            .join("")
+        : `<div class="hint">Nenhum evento ainda.</div>`;
+    } catch (err) {
+      showAlert(err.message || String(err), "err");
+    }
+  }
+
   async function reconcile() {
     if (!state.selected) return;
     setBusy(true);
@@ -381,6 +409,7 @@
 
   function switchTab(tab) {
     state.tab = tab;
+    if (tab === "logs") loadLogs();
     document.querySelectorAll(".tab").forEach((el) => {
       el.classList.toggle("active", el.dataset.tab === tab);
     });
@@ -402,6 +431,8 @@
     $("btn-demand-on").addEventListener("click", () => setDemand(true));
     $("btn-demand-off").addEventListener("click", () => setDemand(false));
     $("btn-reconcile").addEventListener("click", () => reconcile());
+    const btnLogs = $("btn-refresh-logs");
+    if (btnLogs) btnLogs.addEventListener("click", () => loadLogs());
     $("timed_mode").addEventListener("change", (ev) => {
       if (ev.target.checked) {
         if (!Number($("work_minutes").value)) $("work_minutes").value = "30";

@@ -37,8 +37,9 @@ CONF_LEVEL_NOTIFY_HOLD_SECONDS: Final = "level_notify_hold_seconds"
 # Defaults inspired by the YAML automations this replaces
 DEFAULT_FULL_DISTANCE: Final = 82.0
 DEFAULT_EMPTY_DISTANCE: Final = 120.0
-DEFAULT_ON_THRESHOLD: Final = 82.0
-DEFAULT_OFF_THRESHOLD: Final = 96.0
+# Ultrasonic: higher distance = emptier. Turn ON when empty, OFF when full.
+DEFAULT_ON_THRESHOLD: Final = 101.0
+DEFAULT_OFF_THRESHOLD: Final = 84.0
 DEFAULT_ON_HOLD_SECONDS: Final = 120
 DEFAULT_OFF_HOLD_SECONDS: Final = 120
 DEFAULT_RECONCILE_INTERVAL: Final = 120
