@@ -1,0 +1,14 @@
+{
+  "domain": "tankwise",
+  "name": "Tankwise",
+  "codeowners": [
+    "@augleao"
+  ],
+  "config_flow": true,
+  "documentation": "https://github.com/augleao/TankWise",
+  "integration_type": "device",
+  "iot_class": "calculated",
+  "issue_tracker": "https://github.com/augleao/TankWise/issues",
+  "requirements": [],
+  "version": "0.1.1"
+}

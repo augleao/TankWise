@@ -1,0 +1,33 @@
+name: Validate
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: "0 0 * * *"
+
+jobs:
+  hacs:
+    name: HACS validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: HACS validation
+        uses: hacs/action@main
+        with:
+          category: integration
+          # Topics must be set on the GitHub repo UI (API token cannot edit them).
+          # Required for HACS default-repo submission; ignored here so CI can stay green.
+          ignore: topics
+
+  hassfest:
+    name: Hassfest
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Hassfest
+        uses: home-assistant/actions/hassfest@master

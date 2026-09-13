@@ -1,0 +1,175 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Tankwise setup",
+        "description": "Select the pump switch and tank distance sensor. Distance semantics: lower value = fuller tank. Empty distance must be greater than full distance.",
+        "data": {
+          "name": "Name",
+          "pump_entity": "Pump switch",
+          "distance_entity": "Distance sensor",
+          "full_distance": "Full tank distance",
+          "empty_distance": "Empty tank distance",
+          "expose_percentage": "Expose percentage level sensor"
+        }
+      },
+      "hysteresis": {
+        "title": "Hysteresis & reconcile",
+        "description": "Demand turns ON when distance stays below the on threshold for the hold time. Demand turns OFF when distance stays above the off threshold (or immediately for high-level safety).",
+        "data": {
+          "on_threshold": "Turn-on distance threshold",
+          "off_threshold": "Turn-off distance threshold",
+          "on_hold_seconds": "Turn-on hold time",
+          "off_hold_seconds": "Turn-off hold time",
+          "reconcile_interval": "Reconcile interval"
+        }
+      },
+      "optional": {
+        "title": "Optional features",
+        "description": "Work/rest cycle (rest=0 means continuous), physical toggles, LED mirrors, and notifications. Leave notify blank to disable.",
+        "data": {
+          "work_minutes": "Work minutes",
+          "rest_minutes": "Rest minutes",
+          "failsafe_margin_minutes": "Cyclic failsafe margin",
+          "toggle_entities": "Physical toggle inputs",
+          "led_entities": "LED feedback switches",
+          "notify_service": "Notify service (e.g. notify.mobile_app_phone)",
+          "low_level_percent": "Low level notification %",
+          "critical_level_percent": "Critical level notification %",
+          "level_notify_hold_seconds": "Level notification hold",
+          "reconcile_retries": "Reconcile retries"
+        }
+      }
+    },
+    "error": {
+      "empty_must_be_greater": "Empty tank distance must be greater than full tank distance.",
+      "off_must_be_greater": "Off threshold must be greater than on threshold."
+    },
+    "abort": {
+      "already_configured": "This pump and distance sensor pair is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Tankwise options",
+        "description": "Update calibration, hysteresis, cycle, toggles, LEDs, and notifications.",
+        "data": {
+          "full_distance": "Full tank distance",
+          "empty_distance": "Empty tank distance",
+          "expose_percentage": "Expose percentage level sensor",
+          "on_threshold": "Turn-on distance threshold",
+          "off_threshold": "Turn-off distance threshold",
+          "on_hold_seconds": "Turn-on hold time",
+          "off_hold_seconds": "Turn-off hold time",
+          "reconcile_interval": "Reconcile interval",
+          "work_minutes": "Work minutes",
+          "rest_minutes": "Rest minutes",
+          "failsafe_margin_minutes": "Cyclic failsafe margin",
+          "toggle_entities": "Physical toggle inputs",
+          "led_entities": "LED feedback switches",
+          "notify_service": "Notify service",
+          "low_level_percent": "Low level notification %",
+          "critical_level_percent": "Critical level notification %",
+          "level_notify_hold_seconds": "Level notification hold",
+          "reconcile_retries": "Reconcile retries"
+        }
+      }
+    },
+    "error": {
+      "empty_must_be_greater": "Empty tank distance must be greater than full tank distance.",
+      "off_must_be_greater": "Off threshold must be greater than on threshold."
+    }
+  },
+  "entity": {
+    "switch": {
+      "controller": {
+        "name": "Controller"
+      },
+      "demand": {
+        "name": "Demand"
+      }
+    },
+    "sensor": {
+      "tank_level": {
+        "name": "Tank level"
+      },
+      "tank_distance": {
+        "name": "Tank distance"
+      },
+      "cycle_phase": {
+        "name": "Cycle phase"
+      }
+    },
+    "binary_sensor": {
+      "pump_running": {
+        "name": "Pump running"
+      },
+      "reconcile_fault": {
+        "name": "Reconcile fault"
+      }
+    }
+  },
+  "services": {
+    "turn_on_demand": {
+      "name": "Turn on demand",
+      "description": "Set desired demand to ON.",
+      "fields": {
+        "entry_id": {
+          "name": "Entry ID",
+          "description": "Optional when only one Tankwise instance exists."
+        }
+      }
+    },
+    "turn_off_demand": {
+      "name": "Turn off demand",
+      "description": "Set desired demand to OFF.",
+      "fields": {
+        "entry_id": {
+          "name": "Entry ID",
+          "description": "Optional when only one Tankwise instance exists."
+        }
+      }
+    },
+    "toggle_demand": {
+      "name": "Toggle demand",
+      "description": "Toggle desired demand.",
+      "fields": {
+        "entry_id": {
+          "name": "Entry ID",
+          "description": "Optional when only one Tankwise instance exists."
+        }
+      }
+    },
+    "reconcile_now": {
+      "name": "Reconcile now",
+      "description": "Run the stubborn executor immediately.",
+      "fields": {
+        "entry_id": {
+          "name": "Entry ID",
+          "description": "Optional when only one Tankwise instance exists."
+        }
+      }
+    },
+    "enable_controller": {
+      "name": "Enable controller",
+      "description": "Turn the Tankwise master controller ON.",
+      "fields": {
+        "entry_id": {
+          "name": "Entry ID",
+          "description": "Optional when only one Tankwise instance exists."
+        }
+      }
+    },
+    "disable_controller": {
+      "name": "Disable controller",
+      "description": "Turn the Tankwise master controller OFF and force the pump OFF.",
+      "fields": {
+        "entry_id": {
+          "name": "Entry ID",
+          "description": "Optional when only one Tankwise instance exists."
+        }
+      }
+    }
+  }
+}
