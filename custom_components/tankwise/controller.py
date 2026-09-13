@@ -395,9 +395,7 @@ class TankwiseController:
         await self.async_reconcile(reason="interval")
         self._notify_listeners()
 
-    async def _async_state_changed(
-        self, event: Event[EventStateChangedData]
-    ) -> None:
+    async def _async_state_changed(self, event: Event) -> None:
         entity_id = event.data["entity_id"]
         new_state = event.data.get("new_state")
         old_state = event.data.get("old_state")
