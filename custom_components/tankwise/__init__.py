@@ -51,7 +51,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         await async_register_panel(hass)
     except Exception:  # noqa: BLE001
         _LOGGER.exception(
-            "Tankwise sidebar panel failed to register; config flow still works"
+            "Tankwise sidebar panel failed during domain setup; will retry on entry setup"
         )
 
     from .controller import TankwiseController
