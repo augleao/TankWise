@@ -68,6 +68,7 @@ Defaults are inspired by a typical setup (on `< 82` for 2 min, off `> 96` for 2 
 
 | Entity | Role |
 |--------|------|
+| `switch.*_controller` | **Master enable** — OFF disables Tankwise and forces pump OFF |
 | `switch.*_demand` | Persisted desired demand |
 | `sensor.*_tank_level` | Fill percentage (optional) |
 | `sensor.*_tank_distance` | Distance helper |
@@ -81,6 +82,8 @@ Defaults are inspired by a typical setup (on `< 82` for 2 min, off `> 96` for 2 
 - `tankwise.turn_off_demand`
 - `tankwise.toggle_demand`
 - `tankwise.reconcile_now`
+- `tankwise.enable_controller`
+- `tankwise.disable_controller`
 
 Optional `entry_id` when multiple Tankwise instances exist.
 
