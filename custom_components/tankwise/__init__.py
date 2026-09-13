@@ -20,10 +20,6 @@ from .const import (
     SERVICE_TURN_OFF_DEMAND,
     SERVICE_TURN_ON_DEMAND,
 )
-from .controller import TankwiseController
-from .helpers import merge_entry_config
-from .panel import async_register_panel
-from .websocket_api import async_register_websockets
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -33,17 +29,32 @@ PLATFORMS: list[Platform] = [
     Platform.BINARY_SENSOR,
 ]
 
+# Keep package import light so config_flow can load even if panel/http APIs differ.
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up the Tankwise domain (services, panel, websockets)."""
     hass.data.setdefault(DOMAIN, {})
-    async_register_websockets(hass)
+
+    # Lazy imports — never block config flow discovery.
     try:
+        from .websocket_api import async_register_websockets
+
+        async_register_websockets(hass)
+    except Exception:  # noqa: BLE001
+        _LOGGER.exception("Tankwise websocket API failed to register")
+
+    try:
+        from .panel import async_register_panel
+
         await async_register_panel(hass)
-    except Exception:  # noqa: BLE001 — panel must not block install
-        _LOGGER.exception("Tankwise sidebar panel failed to register; config flow still works")
+    except Exception:  # noqa: BLE001
+        _LOGGER.exception(
+            "Tankwise sidebar panel failed to register; config flow still works"
+        )
+
+    from .controller import TankwiseController
 
     async def _resolve_controller(call: ServiceCall) -> TankwiseController | None:
         entry_id = call.data.get("entry_id")
@@ -69,7 +80,9 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     async def handle_turn_off(call: ServiceCall) -> None:
         controller = await _resolve_controller(call)
         if controller:
-            await controller.async_set_demand(False, reason="service_turn_off", force=True)
+            await controller.async_set_demand(
+                False, reason="service_turn_off", force=True
+            )
 
     async def handle_toggle(call: ServiceCall) -> None:
         controller = await _resolve_controller(call)
@@ -115,6 +128,9 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Tankwise from a config entry."""
+    from .controller import TankwiseController
+    from .helpers import merge_entry_config
+
     hass.data.setdefault(DOMAIN, {})
     config = merge_entry_config(dict(entry.data), dict(entry.options))
     controller = TankwiseController(hass, entry.entry_id, config)
@@ -143,6 +159,6 @@ async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> Non
 
 
 @callback
-def get_controller(hass: HomeAssistant, entry_id: str) -> TankwiseController:
+def get_controller(hass: HomeAssistant, entry_id: str):
     """Return the controller for an entry."""
     return hass.data[DOMAIN][entry_id]["controller"]

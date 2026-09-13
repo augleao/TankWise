@@ -5,8 +5,6 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
-from homeassistant.components import panel_custom
-from homeassistant.components.http import StaticPathConfig
 from homeassistant.core import HomeAssistant
 
 _LOGGER = logging.getLogger(__name__)
@@ -21,15 +19,28 @@ async def async_register_panel(hass: HomeAssistant) -> None:
     if _PANEL_REGISTERED:
         return
 
-    await hass.http.async_register_static_paths(
-        [
-            StaticPathConfig(
-                "/tankwise/frontend",
-                str(FRONTEND_PATH),
-                False,
-            )
-        ]
-    )
+    # Prefer modern StaticPathConfig; fall back for older cores.
+    try:
+        from homeassistant.components.http import StaticPathConfig
+
+        await hass.http.async_register_static_paths(
+            [
+                StaticPathConfig(
+                    "/tankwise/frontend",
+                    str(FRONTEND_PATH),
+                    False,
+                )
+            ]
+        )
+    except Exception:  # noqa: BLE001
+        _LOGGER.debug("StaticPathConfig unavailable; using legacy static path API")
+        hass.http.async_register_static_path(
+            "/tankwise/frontend",
+            str(FRONTEND_PATH),
+            cache_headers=False,
+        )
+
+    from homeassistant.components import panel_custom
 
     try:
         await panel_custom.async_register_panel(
@@ -41,10 +52,20 @@ async def async_register_panel(hass: HomeAssistant) -> None:
             module_url="/tankwise/frontend/tankwise-panel.js",
             embed_iframe=False,
             require_admin=True,
-            config_panel_domain="tankwise",
+        )
+    except TypeError:
+        # Older panel_custom signatures
+        await panel_custom.async_register_panel(
+            hass,
+            frontend_url_path="tankwise",
+            webcomponent_name="tankwise-panel",
+            sidebar_title="Tankwise",
+            sidebar_icon="mdi:water-pump",
+            module_url="/tankwise/frontend/tankwise-panel.js",
+            embed_iframe=False,
+            require_admin=True,
         )
     except ValueError as err:
-        # Already registered on reload
         _LOGGER.debug("Tankwise panel registration skipped: %s", err)
 
     _PANEL_REGISTERED = True

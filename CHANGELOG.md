@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.2] - 2026-03-22
+
+### Fixed
+
+- Config flow HTTP 500 on install: lazy-load panel/websockets so package import cannot crash the flow
+- Hardened panel static-path registration for older Home Assistant cores
+- Install form uses official entity/number selectors (reliable frontend serialization)
+
 ## [0.2.1] - 2026-03-22
 
 ### Fixed
