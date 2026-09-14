@@ -83,14 +83,17 @@
                 <label for="distance_entity">Sensor de distância</label>
                 <select id="distance_entity" data-key="distance_entity"></select>
               </div>
-              <div>
-                <label for="toggle_entities">Botões físicos (opcional)</label>
-                <select id="toggle_entities" data-key="toggle_entities" multiple></select>
-                <p class="hint">Segure Ctrl/Cmd para vários</p>
+              <div style="grid-column: 1 / -1">
+                <label>Botões físicos (opcional)</label>
+                <div class="entity-selected" id="toggle_entities_list"></div>
+                <button type="button" class="secondary" id="btn-add-toggles">Adicionar botões</button>
+                <p class="hint">Cada botão alterna a demanda da bomba (0↔1). Pode adicionar vários.</p>
               </div>
-              <div>
-                <label for="led_entities">LEDs / indicadores (opcional)</label>
-                <select id="led_entities" data-key="led_entities" multiple></select>
+              <div style="grid-column: 1 / -1">
+                <label>LEDs / indicadores (opcional)</label>
+                <div class="entity-selected" id="led_entities_list"></div>
+                <button type="button" class="secondary" id="btn-add-leds">Adicionar LEDs</button>
+                <p class="hint">Dispositivos que mostram o status da bomba. Pode adicionar vários.</p>
               </div>
             </div>
             <div class="grid" style="margin-top: 12px">
@@ -210,5 +213,21 @@
       </div>
     </div>
     <script src="static/app.js"></script>
+  
+    <div class="modal-backdrop hidden" id="entity-modal">
+      <div class="modal" role="dialog" aria-modal="true">
+        <div class="modal-head">
+          <h3 id="entity-modal-title">Adicionar</h3>
+          <button type="button" class="modal-x" id="entity-modal-close" title="Fechar">×</button>
+        </div>
+        <p class="hint" id="entity-modal-hint"></p>
+        <input type="search" id="entity-modal-search" placeholder="Pesquisar entidade…" autocomplete="off" />
+        <div class="entity-list modal-list" id="entity-modal-list"></div>
+        <div class="modal-actions">
+          <button type="button" class="secondary" id="entity-modal-cancel">Cancelar</button>
+          <button type="button" id="entity-modal-confirm">Adicionar selecionados</button>
+        </div>
+      </div>
+    </div>
   </body>
 </html>

@@ -216,6 +216,154 @@ select[multiple] {
   min-height: 108px;
 }
 
+
+.entity-selected {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 6px 0 8px;
+}
+
+.entity-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--tw-border);
+  border-radius: 10px;
+  background: #fbfcfb;
+}
+
+.entity-row-name {
+  font-size: 0.9rem;
+  color: #1c2b24;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.entity-remove {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 8px;
+  background: #fff;
+  color: #c62828;
+  border: 1px solid #ef9a9a;
+  font-size: 1.15rem;
+  line-height: 1;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.entity-remove:hover {
+  background: #fdecea;
+}
+
+.chips-empty {
+  color: var(--tw-muted);
+  font-size: 0.85rem;
+  padding: 4px 0;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 40, 30, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+}
+
+.modal-backdrop.hidden {
+  display: none;
+}
+
+.modal {
+  width: min(560px, 100%);
+  max-height: min(80vh, 720px);
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid var(--tw-border);
+  box-shadow: 0 16px 40px rgba(20, 60, 40, 0.18);
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.modal-head h3 {
+  margin: 0;
+  color: var(--tw-green-dark);
+  font-size: 1.1rem;
+}
+
+.modal-x {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 8px;
+  background: #fff;
+  color: var(--tw-muted);
+  border: 1px solid var(--tw-border);
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+.modal-list,
+.entity-list {
+  max-height: 42vh;
+  overflow: auto;
+  border: 1px solid var(--tw-border);
+  border-radius: 10px;
+  background: #fbfcfb;
+  padding: 6px;
+}
+
+.entity-opt {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  font-weight: 500;
+  color: #1c2b24;
+  cursor: pointer;
+}
+
+.entity-opt:hover {
+  background: #eef5f1;
+}
+
+.entity-opt input {
+  width: auto;
+  margin-top: 2px;
+}
+
+.entity-empty {
+  padding: 12px;
+  color: var(--tw-muted);
+  font-size: 0.85rem;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
 .hint {
   font-size: 0.8rem;
   color: var(--tw-muted);
