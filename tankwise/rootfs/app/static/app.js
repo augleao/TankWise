@@ -8,7 +8,7 @@
     busy: false,
     tab: "monitor",
     pollTimer: null,
-    entityQuery: { toggle_entities: "", led_entities: "" },
+    entityModal: null,
   };
 
   const $ = (id) => document.getElementById(id);
@@ -257,6 +257,7 @@
     el.innerHTML = opts.join("");
   }
 
+
   function entityItems(domains, selectedIds) {
     const list = mergeDomains(domains);
     const selectedSet = new Set(selectedIds || []);
@@ -269,76 +270,93 @@
     return items;
   }
 
-  function renderEntityPicker(el) {
+  function selectedList(key, domains, emptyText) {
+    const el = $(key === "toggle_entities" ? "toggle_entities_list" : "led_entities_list");
     if (!el || !state.config) return;
-    const key = el.dataset.picker;
-    const domains = String(el.dataset.domains || "")
-      .split(",")
-      .map((d) => d.trim())
-      .filter(Boolean);
     const selected = Array.isArray(state.config[key]) ? state.config[key] : [];
-    const query = state.entityQuery[key] || "";
-    const q = query.trim().toLowerCase();
-    const items = entityItems(domains, selected).filter(
-      (item) =>
-        !q ||
-        item.name.toLowerCase().includes(q) ||
-        item.id.toLowerCase().includes(q)
-    );
-    const chips = selected
-      .map((id) => {
-        const found = entityItems(domains, selected).find((x) => x.id === id);
-        const label = found ? found.name : id;
-        return `<button type="button" class="chip" data-remove="${id}">${label} ×</button>`;
-      })
-      .join("");
-    const rows = items.length
+    const byId = new Map(entityItems(domains, selected).map((i) => [i.id, i]));
+    el.innerHTML = selected.length
+      ? selected
+          .map((id) => {
+            const item = byId.get(id) || { id, name: id };
+            return `<div class="entity-row"><span class="entity-row-name" title="${item.id}">${item.name}</span><button type="button" class="entity-remove" data-key="${key}" data-id="${id}" title="Remover">×</button></div>`;
+          })
+          .join("")
+      : `<div class="chips-empty">${emptyText}</div>`;
+    el.querySelectorAll(".entity-remove").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const k = btn.getAttribute("data-key");
+        const id = btn.getAttribute("data-id");
+        state.config[k] = (state.config[k] || []).filter((x) => x !== id);
+        selectedList(k, domains, emptyText);
+      });
+    });
+  }
+
+  function renderModalList() {
+    const modal = state.entityModal;
+    if (!modal) return;
+    const draft = new Set(modal.draft || []);
+    const q = String(modal.query || "").trim().toLowerCase();
+    const items = entityItems(modal.domains, Array.from(draft))
+      .map((item) => ({ ...item, selected: draft.has(item.id) }))
+      .filter(
+        (item) =>
+          !q ||
+          item.name.toLowerCase().includes(q) ||
+          item.id.toLowerCase().includes(q)
+      );
+    const list = $("entity-modal-list");
+    list.innerHTML = items.length
       ? items
           .map(
-            (item) => `
-              <label class="entity-opt">
-                <input type="checkbox" value="${item.id}" ${item.selected ? "checked" : ""}>
-                <span>${item.name}</span>
-              </label>`
+            (item) =>
+              `<label class="entity-opt"><input type="checkbox" value="${item.id}" ${item.selected ? "checked" : ""}><span>${item.name}</span></label>`
           )
           .join("")
       : `<div class="entity-empty">Nenhuma entidade encontrada.</div>`;
-    el.innerHTML = `
-      <div class="chips">${chips || `<span class="chips-empty">Nenhuma selecionada</span>`}</div>
-      <input type="search" placeholder="Pesquisar entidade…" value="${query}" autocomplete="off">
-      <div class="entity-list">${rows}</div>
-    `;
-    const search = el.querySelector('input[type="search"]');
-    if (search) {
-      search.addEventListener("input", (ev) => {
-        state.entityQuery[key] = ev.target.value;
-        const pos = ev.target.selectionStart;
-        renderEntityPicker(el);
-        const again = el.querySelector('input[type="search"]');
-        if (again) {
-          again.focus();
-          try {
-            again.setSelectionRange(pos, pos);
-          } catch (_) {}
-        }
-      });
-    }
-    el.querySelectorAll(".chip[data-remove]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const id = btn.getAttribute("data-remove");
-        state.config[key] = selected.filter((x) => x !== id);
-        renderEntityPicker(el);
-      });
-    });
-    el.querySelectorAll('input[type="checkbox"]').forEach((box) => {
+    list.querySelectorAll('input[type="checkbox"]').forEach((box) => {
       box.addEventListener("change", () => {
-        const set = new Set(selected);
+        const set = new Set(state.entityModal.draft || []);
         if (box.checked) set.add(box.value);
         else set.delete(box.value);
-        state.config[key] = Array.from(set);
-        renderEntityPicker(el);
+        state.entityModal.draft = Array.from(set);
       });
     });
+  }
+
+  function openEntityModal(key, domains, title, hint) {
+    state.entityModal = {
+      key,
+      domains,
+      title,
+      hint,
+      query: "",
+      draft: [...(state.config[key] || [])],
+    };
+    $("entity-modal-title").textContent = title;
+    $("entity-modal-hint").textContent = hint;
+    $("entity-modal-search").value = "";
+    $("entity-modal").classList.remove("hidden");
+    renderModalList();
+    $("entity-modal-search").focus();
+  }
+
+  function closeEntityModal() {
+    state.entityModal = null;
+    $("entity-modal").classList.add("hidden");
+  }
+
+  function confirmEntityModal() {
+    if (!state.entityModal || !state.config) return;
+    const { key, draft, domains } = state.entityModal;
+    state.config[key] = [...draft];
+    closeEntityModal();
+    if (key === "toggle_entities") {
+      selectedList("toggle_entities", domains, "Nenhum botão adicionado.");
+    } else {
+      selectedList("led_entities", domains, "Nenhum LED/feedback adicionado.");
+    }
   }
 
   function bindConfigFields() {
@@ -346,8 +364,8 @@
     const c = state.config;
     fillSelect($("pump_entity"), ["switch", "input_boolean"], c.pump_entity);
     fillSelect($("distance_entity"), ["sensor", "input_number", "number"], c.distance_entity);
-    renderEntityPicker($("toggle_entities_picker"));
-    renderEntityPicker($("led_entities_picker"));
+    selectedList("toggle_entities", ["binary_sensor", "input_boolean", "switch"], "Nenhum botão adicionado.");
+    selectedList("led_entities", ["light", "switch", "input_boolean"], "Nenhum LED/feedback adicionado.");
 
     const scalars = [
       "full_distance",
@@ -605,6 +623,48 @@
     $("btn-reconcile").addEventListener("click", () => reconcile());
     const btnLogs = $("btn-refresh-logs");
     if (btnLogs) btnLogs.addEventListener("click", () => loadLogs());
+    const addToggles = $("btn-add-toggles");
+    if (addToggles) {
+      addToggles.addEventListener("click", () =>
+        openEntityModal(
+          "toggle_entities",
+          ["binary_sensor", "input_boolean", "switch"],
+          "Adicionar botões físicos",
+          "Pesquise e marque um ou mais botões/interruptores que alternam a demanda."
+        )
+      );
+    }
+    const addLeds = $("btn-add-leds");
+    if (addLeds) {
+      addLeds.addEventListener("click", () =>
+        openEntityModal(
+          "led_entities",
+          ["light", "switch", "input_boolean"],
+          "Adicionar LEDs / feedback",
+          "Pesquise e marque um ou mais dispositivos que mostram o status da bomba."
+        )
+      );
+    }
+    const modal = $("entity-modal");
+    if (modal) {
+      modal.addEventListener("click", (ev) => {
+        if (ev.target === modal) closeEntityModal();
+      });
+    }
+    const modalClose = $("entity-modal-close");
+    if (modalClose) modalClose.addEventListener("click", () => closeEntityModal());
+    const modalCancel = $("entity-modal-cancel");
+    if (modalCancel) modalCancel.addEventListener("click", () => closeEntityModal());
+    const modalConfirm = $("entity-modal-confirm");
+    if (modalConfirm) modalConfirm.addEventListener("click", () => confirmEntityModal());
+    const modalSearch = $("entity-modal-search");
+    if (modalSearch) {
+      modalSearch.addEventListener("input", (ev) => {
+        if (!state.entityModal) return;
+        state.entityModal.query = ev.target.value;
+        renderModalList();
+      });
+    }
     $("timed_mode").addEventListener("change", (ev) => {
       if (ev.target.checked) {
         if (!Number($("work_minutes").value)) $("work_minutes").value = "30";

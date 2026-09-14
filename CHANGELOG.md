@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.4.5] - 2026-09-14
 
 ### Added
-- Searchable multi-select for **Botões físicos** and **LEDs / feedback** in the sidebar panel and add-on UI (filter by name, select multiple, chips to remove).
+- **Botões físicos** and **LEDs / feedback**: add via button → search modal (multi-select), then manage as a list with red × to remove (sidebar panel + add-on UI).
 
 ## [0.4.4] - 2026-09-14
 

@@ -25,7 +25,7 @@ class TankwisePanel extends HTMLElement {
     this._section = "monitor"; // monitor | config | cycle | alerts | logs
     this._version = "";
     this._logs = [];
-    this._entityQuery = { toggle_entities: "", led_entities: "" };
+    this._entityModal = null; // { key, domains, title, hint, query, draft: string[] }
   }
 
   set hass(hass) {
@@ -304,6 +304,7 @@ class TankwisePanel extends HTMLElement {
   }
 
 
+
   _entityItems(domains, selectedIds) {
     const list = this._mergeDomains(domains);
     const selectedSet = new Set(selectedIds || []);
@@ -324,46 +325,105 @@ class TankwisePanel extends HTMLElement {
     );
   }
 
-  _setEntitySelected(key, entityId, selected) {
+  _removeEntity(key, entityId) {
     if (!this._config || !entityId) return;
-    const cur = new Set(this._list(key));
-    if (selected) cur.add(entityId);
-    else cur.delete(entityId);
-    this._config = { ...this._config, [key]: Array.from(cur) };
+    this._config = {
+      ...this._config,
+      [key]: this._list(key).filter((id) => id !== entityId),
+    };
   }
 
-  _entityMultiPicker(key, domains, hint) {
+  _openEntityModal(key, domains, title, hint) {
+    this._entityModal = {
+      key,
+      domains,
+      title,
+      hint,
+      query: "",
+      draft: [...this._list(key)],
+    };
+    this._render();
+  }
+
+  _closeEntityModal() {
+    this._entityModal = null;
+    this._render();
+  }
+
+  _confirmEntityModal() {
+    if (!this._config || !this._entityModal) return;
+    const { key, draft } = this._entityModal;
+    this._config = { ...this._config, [key]: [...draft] };
+    this._entityModal = null;
+    this._render();
+  }
+
+  _toggleModalDraft(entityId, selected) {
+    if (!this._entityModal || !entityId) return;
+    const set = new Set(this._entityModal.draft || []);
+    if (selected) set.add(entityId);
+    else set.delete(entityId);
+    this._entityModal = { ...this._entityModal, draft: Array.from(set) };
+  }
+
+  _entitySelectedList(key, domains, emptyText) {
     const selected = this._list(key);
-    const query = this._entityQuery[key] || "";
-    const items = this._filterEntities(this._entityItems(domains, selected), query);
-    const chips = selected
-      .map((id) => {
-        const found = this._entityItems(domains, selected).find((x) => x.id === id);
-        const label = found ? found.name : id;
-        return `<button type="button" class="chip" data-entity-remove="${this._esc(key)}" data-entity-id="${this._esc(id)}" title="Remover">${this._esc(label)} ×</button>`;
-      })
-      .join("");
+    const byId = new Map(
+      this._entityItems(domains, selected).map((item) => [item.id, item])
+    );
+    const rows = selected.length
+      ? selected
+          .map((id) => {
+            const item = byId.get(id) || { id, name: id };
+            return `
+              <div class="entity-row">
+                <span class="entity-row-name" title="${this._esc(item.id)}">${this._esc(item.name)}</span>
+                <button type="button" class="entity-remove" data-entity-remove="${this._esc(key)}" data-entity-id="${this._esc(item.id)}" title="Remover">×</button>
+              </div>`;
+          })
+          .join("")
+      : `<div class="chips-empty">${this._esc(emptyText)}</div>`;
+    return `<div class="entity-selected">${rows}</div>`;
+  }
+
+  _entityModalHtml() {
+    const modal = this._entityModal;
+    if (!modal) return "";
+    const draft = new Set(modal.draft || []);
+    const base = this._entityItems(modal.domains, Array.from(draft)).map((item) => ({
+      ...item,
+      selected: draft.has(item.id),
+    }));
+    const items = this._filterEntities(base, modal.query);
     const rows = items.length
       ? items
           .map(
             (item) => `
               <label class="entity-opt">
-                <input type="checkbox" data-entity-toggle="${this._esc(key)}" value="${this._esc(item.id)}" ${item.selected ? "checked" : ""}>
+                <input type="checkbox" data-modal-toggle value="${this._esc(item.id)}" ${item.selected ? "checked" : ""}>
                 <span>${this._esc(item.name)}</span>
               </label>`
           )
           .join("")
       : `<div class="entity-empty">Nenhuma entidade encontrada.</div>`;
     return `
-      <div class="entity-picker" data-entity-picker="${this._esc(key)}">
-        <div class="chips">${chips || `<span class="chips-empty">Nenhuma selecionada</span>`}</div>
-        <input type="search" placeholder="Pesquisar entidade…" data-entity-search="${this._esc(key)}" value="${this._esc(query)}" autocomplete="off">
-        <div class="entity-list">${rows}</div>
-        <div class="hint">${this._esc(hint)}</div>
+      <div class="modal-backdrop" data-modal-backdrop>
+        <div class="modal" role="dialog" aria-modal="true">
+          <div class="modal-head">
+            <h3>${this._esc(modal.title)}</h3>
+            <button type="button" class="modal-x" data-modal-cancel title="Fechar">×</button>
+          </div>
+          <p class="hint" style="margin:0 0 10px">${this._esc(modal.hint)}</p>
+          <input type="search" class="modal-search" placeholder="Pesquisar entidade…" value="${this._esc(modal.query)}" autocomplete="off" data-modal-search>
+          <div class="entity-list modal-list">${rows}</div>
+          <div class="modal-actions">
+            <button type="button" class="secondary" data-modal-cancel>Cancelar</button>
+            <button type="button" data-modal-confirm>Adicionar selecionados</button>
+          </div>
+        </div>
       </div>
     `;
   }
-
 
   _thresholdMode() {
     return this._val("threshold_mode", "distance") === "percent" ? "percent" : "distance";
@@ -590,16 +650,43 @@ class TankwisePanel extends HTMLElement {
         }
         select[multiple] { min-height: 108px; }
 
-        .entity-picker { display: flex; flex-direction: column; gap: 8px; }
-        .chips { display: flex; flex-wrap: wrap; gap: 6px; min-height: 28px; align-items: center; }
-        .chips-empty { color: var(--tw-muted); font-size: 0.85rem; }
-        .chip {
-          border: 1px solid var(--tw-border); background: #e8f2ec; color: var(--tw-green-dark);
-          border-radius: 999px; padding: 4px 10px; font-size: 0.78rem; font-weight: 600; cursor: pointer;
+        .entity-selected { display: flex; flex-direction: column; gap: 6px; margin: 6px 0 8px; }
+        .entity-row {
+          display: flex; align-items: center; justify-content: space-between; gap: 10px;
+          padding: 8px 10px; border: 1px solid var(--tw-border); border-radius: 10px; background: #fbfcfb;
         }
-        .chip:hover { background: #d7ebe0; }
-        .entity-list {
-          max-height: 180px; overflow: auto; border: 1px solid var(--tw-border);
+        .entity-row-name { font-size: 0.9rem; color: #1c2b24; overflow: hidden; text-overflow: ellipsis; }
+        .entity-remove {
+          flex: 0 0 auto; width: 28px; height: 28px; padding: 0; border-radius: 8px;
+          background: #fff; color: #c62828; border: 1px solid #ef9a9a; font-size: 1.15rem; line-height: 1;
+          font-weight: 700;
+        }
+        .entity-remove:hover { background: #fdecea; }
+        .chips-empty { color: var(--tw-muted); font-size: 0.85rem; padding: 4px 0; }
+        .add-btn { margin-top: 4px; }
+        .modal-backdrop {
+          position: fixed; inset: 0; background: rgba(20, 40, 30, 0.45);
+          display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 16px;
+        }
+        .modal {
+          width: min(560px, 100%); max-height: min(80vh, 720px);
+          background: #fff; border-radius: 16px; border: 1px solid var(--tw-border);
+          box-shadow: 0 16px 40px rgba(20, 60, 40, 0.18); padding: 16px 18px;
+          display: flex; flex-direction: column; gap: 8px;
+        }
+        .modal-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+        .modal-head h3 { margin: 0; color: var(--tw-green-dark); font-size: 1.1rem; }
+        .modal-x {
+          width: 32px; height: 32px; padding: 0; border-radius: 8px; background: #fff;
+          color: var(--tw-muted); border: 1px solid var(--tw-border); font-size: 1.2rem;
+        }
+        .modal-search, input[type=search] {
+          width: 100%; box-sizing: border-box; padding: 10px 12px;
+          border-radius: 10px; border: 1px solid var(--tw-border);
+          background: #fbfcfb; color: #1c2b24; font-size: 0.95rem;
+        }
+        .modal-list, .entity-list {
+          max-height: 42vh; overflow: auto; border: 1px solid var(--tw-border);
           border-radius: 10px; background: #fbfcfb; padding: 6px;
         }
         .entity-opt {
@@ -609,11 +696,7 @@ class TankwisePanel extends HTMLElement {
         .entity-opt:hover { background: #eef5f1; }
         .entity-opt input { width: auto; margin-top: 2px; }
         .entity-empty { padding: 12px; color: var(--tw-muted); font-size: 0.85rem; }
-        input[type=search] {
-          width: 100%; box-sizing: border-box; padding: 10px 12px;
-          border-radius: 10px; border: 1px solid var(--tw-border);
-          background: #fbfcfb; color: #1c2b24; font-size: 0.95rem;
-        }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
         .hint { font-size: 0.8rem; color: var(--tw-muted); margin-top: 4px; }
         .check { display: flex; align-items: center; gap: 8px; margin: 10px 0; color: #31463c; }
         .check input { width: auto; }
@@ -695,34 +778,66 @@ class TankwisePanel extends HTMLElement {
     btn("demand_off", () => this._setDemand(false));
     btn("reconcile", () => this._reconcile());
 
-    root.querySelectorAll("[data-entity-search]").forEach((el) => {
-      el.oninput = (ev) => {
-        const key = el.getAttribute("data-entity-search");
-        this._entityQuery[key] = ev.target.value;
+    root.querySelectorAll("[data-open-entity-modal]").forEach((el) => {
+      el.onclick = () => {
+        const key = el.getAttribute("data-open-entity-modal");
+        if (key === "toggle_entities") {
+          this._openEntityModal(
+            "toggle_entities",
+            ["binary_sensor", "input_boolean", "switch"],
+            "Adicionar botões físicos",
+            "Pesquise e marque um ou mais botões/interruptores que alternam a demanda."
+          );
+        } else if (key === "led_entities") {
+          this._openEntityModal(
+            "led_entities",
+            ["light", "switch", "input_boolean"],
+            "Adicionar LEDs / feedback",
+            "Pesquise e marque um ou mais dispositivos que mostram o status da bomba."
+          );
+        }
+      };
+    });
+    root.querySelectorAll("[data-entity-remove]").forEach((el) => {
+      el.onclick = () => {
+        this._removeEntity(
+          el.getAttribute("data-entity-remove"),
+          el.getAttribute("data-entity-id")
+        );
+        this._render();
+      };
+    });
+    const modalSearch = root.querySelector("[data-modal-search]");
+    if (modalSearch) {
+      modalSearch.oninput = (ev) => {
+        if (!this._entityModal) return;
+        this._entityModal = { ...this._entityModal, query: ev.target.value };
         const pos = ev.target.selectionStart;
         this._render();
-        const again = this.shadowRoot.querySelector(`[data-entity-search="${key}"]`);
+        const again = this.shadowRoot.querySelector("[data-modal-search]");
         if (again) {
           again.focus();
           try { again.setSelectionRange(pos, pos); } catch (_) {}
         }
       };
-    });
-    root.querySelectorAll("[data-entity-toggle]").forEach((el) => {
+    }
+    root.querySelectorAll("[data-modal-toggle]").forEach((el) => {
       el.onchange = () => {
-        const key = el.getAttribute("data-entity-toggle");
-        this._setEntitySelected(key, el.value, el.checked);
+        this._toggleModalDraft(el.value, el.checked);
         this._render();
       };
     });
-    root.querySelectorAll("[data-entity-remove]").forEach((el) => {
-      el.onclick = () => {
-        const key = el.getAttribute("data-entity-remove");
-        const id = el.getAttribute("data-entity-id");
-        this._setEntitySelected(key, id, false);
-        this._render();
-      };
+    root.querySelectorAll("[data-modal-cancel]").forEach((el) => {
+      el.onclick = () => this._closeEntityModal();
     });
+    const backdrop = root.querySelector("[data-modal-backdrop]");
+    if (backdrop) {
+      backdrop.onclick = (ev) => {
+        if (ev.target === backdrop) this._closeEntityModal();
+      };
+    }
+    const confirmBtn = root.querySelector("[data-modal-confirm]");
+    if (confirmBtn) confirmBtn.onclick = () => this._confirmEntityModal();
 
     btn("refresh_logs", async () => {
       this._busy = true;
@@ -880,19 +995,23 @@ class TankwisePanel extends HTMLElement {
               </div>
                             <div style="grid-column: 1 / -1">
                 <label>Botões físicos (opcional)</label>
-                ${this._entityMultiPicker(
+                ${this._entitySelectedList(
                   "toggle_entities",
                   ["binary_sensor", "input_boolean", "switch"],
-                  "Pesquise e marque um ou mais botões. Cada um alterna a demanda da bomba (0↔1)."
+                  "Nenhum botão adicionado."
                 )}
+                <button type="button" class="secondary add-btn" data-open-entity-modal="toggle_entities">Adicionar botões</button>
+                <div class="hint">Cada botão alterna a demanda da bomba (0↔1). Pode adicionar vários.</div>
               </div>
               <div style="grid-column: 1 / -1">
                 <label>LEDs / feedback (opcional)</label>
-                ${this._entityMultiPicker(
+                ${this._entitySelectedList(
                   "led_entities",
                   ["light", "switch", "input_boolean"],
-                  "Pesquise e marque um ou mais dispositivos que mostram o status da bomba (Controle da bomba)."
+                  "Nenhum LED/feedback adicionado."
                 )}
+                <button type="button" class="secondary add-btn" data-open-entity-modal="led_entities">Adicionar LEDs</button>
+                <div class="hint">Dispositivos que mostram o status da bomba. Pode adicionar vários.</div>
               </div>
             </div>
           </div>
@@ -1063,6 +1182,7 @@ class TankwisePanel extends HTMLElement {
           }
           `
           }
+          ${this._entityModalHtml()}
         </div>
       </div>
     `;
