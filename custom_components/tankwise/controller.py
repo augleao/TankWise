@@ -264,6 +264,16 @@ class TankwiseController:
                 self.hass, list(tracked), self._async_state_changed
             )
         )
+        # Fast tick for hysteresis holds. Distance sensors often keep the same
+        # state for long periods (no state_changed), so relying only on
+        # reconcile_interval (default 120s) can delay demand by ~2x the hold.
+        self._unsubs.append(
+            async_track_time_interval(
+                self.hass,
+                self._async_level_tick,
+                timedelta(seconds=5),
+            )
+        )
         self._unsubs.append(
             async_track_time_interval(
                 self.hass,
@@ -342,6 +352,13 @@ class TankwiseController:
             )
         pump = is_on_state(self.hass.states.get(self.pump_entity))
         allowed = self._pump_allowed(distance)
+        now = dt_util.utcnow()
+        on_hold_elapsed = None
+        off_hold_elapsed = None
+        if self._on_condition_since is not None:
+            on_hold_elapsed = round((now - self._on_condition_since).total_seconds(), 1)
+        if self._off_condition_since is not None:
+            off_hold_elapsed = round((now - self._off_condition_since).total_seconds(), 1)
         return TankwiseSnapshot(
             desired_on=self.desired_on,
             enabled=self.enabled,
@@ -361,6 +378,13 @@ class TankwiseController:
                 ATTR_ALLOWED: allowed,
                 ATTR_LAST_ERROR: self.last_error,
                 ATTR_ENABLED: self.enabled,
+                "threshold_mode": self.threshold_mode,
+                "on_threshold": self.on_threshold,
+                "off_threshold": self.off_threshold,
+                "on_hold_seconds": self.on_hold,
+                "off_hold_seconds": self.off_hold,
+                "on_hold_elapsed": on_hold_elapsed,
+                "off_hold_elapsed": off_hold_elapsed,
             },
         )
 
@@ -501,6 +525,13 @@ class TankwiseController:
             await self.async_set_demand(False, reason="boot_full_level", force=True)
         else:
             await self.async_reconcile(reason="boot_recovery")
+        # Start hysteresis timers immediately (don't wait for first interval).
+        await self._async_evaluate_level()
+        self._notify_listeners()
+
+    async def _async_level_tick(self, _now: datetime) -> None:
+        """Re-check level holds frequently even when distance is unchanged."""
+        await self._async_evaluate_level()
         self._notify_listeners()
 
     async def _async_interval(self, _now: datetime) -> None:

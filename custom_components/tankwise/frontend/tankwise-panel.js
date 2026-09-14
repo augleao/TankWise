@@ -45,6 +45,21 @@ class TankwisePanel extends HTMLElement {
   async _boot() {
     await this._loadEntities();
     await this._refreshList();
+    if (this._poll) clearInterval(this._poll);
+    this._poll = setInterval(() => {
+      if (!this._hass || this._busy) return;
+      if (this._section === "monitor" || this._section === "logs") {
+        this._refreshList();
+        if (this._section === "logs") this._loadLogs().then(() => this._render());
+      }
+    }, 5000);
+  }
+
+  disconnectedCallback() {
+    if (this._poll) {
+      clearInterval(this._poll);
+      this._poll = null;
+    }
   }
 
   async _ws(type, data = {}) {
@@ -679,6 +694,16 @@ class TankwisePanel extends HTMLElement {
                   <div class="stat"><div class="k">Nível</div><div class="v">${pct === null ? "—" : pct.toFixed(0) + "%"}</div></div>
                   <div class="stat"><div class="k">Fase</div><div class="v" style="font-size:1rem">${this._esc(st.cycle_phase || "idle")}</div></div>
                 </div>
+                ${
+                  st.on_hold_elapsed != null && !demand
+                    ? `<div class="hint" style="margin-top:10px">Hold para ligar: ${Number(st.on_hold_elapsed).toFixed(0)}s / ${Number(st.on_hold_seconds || 120)}s (nível ≤ limiar de ligar)</div>`
+                    : ""
+                }
+                ${
+                  st.off_hold_elapsed != null && demand
+                    ? `<div class="hint" style="margin-top:10px">Hold para desligar: ${Number(st.off_hold_elapsed).toFixed(0)}s / ${Number(st.off_hold_seconds || 120)}s (nível ≥ limiar de desligar)</div>`
+                    : ""
+                }
               </div>
             </div>
           </div>
@@ -883,6 +908,37 @@ class TankwisePanel extends HTMLElement {
             </div>
             <div class="actions">
               <button id="save" ${this._busy ? "disabled" : ""}>Salvar alertas</button>
+            </div>
+          </div>
+          `
+              : ""
+          }
+
+          ${
+            sec === "logs"
+              ? `
+          <div class="card">
+            <h2>Logs do controlador</h2>
+            <div class="desc">Eventos recentes de demanda, histerese, botões e reconciliação (em memória; zera ao reiniciar o Core).</div>
+            <div class="actions" style="margin-top:0;margin-bottom:12px">
+              <button id="refresh_logs" class="secondary" ${this._busy ? "disabled" : ""}>Atualizar logs</button>
+            </div>
+            <div class="log-box">
+              ${
+                (this._logs || []).length
+                  ? this._logs
+                      .map((row) => {
+                        const ts = String(row.ts || "").replace("T", " ").replace("Z", "");
+                        const ev = row.event || "";
+                        const extra = Object.entries(row)
+                          .filter(([k]) => !["ts", "event"].includes(k))
+                          .map(([k, v]) => `${k}=${v}`)
+                          .join(" · ");
+                        return `<div class="log-row"><span class="log-ts">${this._esc(ts)}</span><span class="log-ev">${this._esc(ev)}</span><span class="log-extra">${this._esc(extra)}</span></div>`;
+                      })
+                      .join("")
+                  : `<div class="hint" style="padding:14px">Nenhum evento ainda. Altere a demanda, aguarde o hold dos limiares ou use um botão físico e atualize.</div>`
+              }
             </div>
           </div>
           `
