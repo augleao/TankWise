@@ -16,7 +16,26 @@ _LOGGER = logging.getLogger(__name__)
 
 FRONTEND_PATH = Path(__file__).parent / "frontend"
 PANEL_URL_PATH = "tankwise"
-PANEL_JS = "/tankwise/frontend/tankwise-panel.js?v=0.3.1"
+PANEL_JS_PATH = "/tankwise/frontend/tankwise-panel.js"
+
+
+def _integration_version() -> str:
+    """Return manifest version for cache-busting the panel JS."""
+    try:
+        import json
+
+        manifest = json.loads(
+            (Path(__file__).with_name("manifest.json")).read_text(encoding="utf-8")
+        )
+        return str(manifest.get("version", "0"))
+    except Exception:  # noqa: BLE001
+        return "0"
+
+
+def _panel_js_url() -> str:
+    return f"{PANEL_JS_PATH}?v={_integration_version()}"
+
+
 _PANEL_REGISTERED = False
 
 
@@ -64,7 +83,7 @@ def _register_built_in(hass: HomeAssistant) -> None:
                 "name": "tankwise-panel",
                 "embed_iframe": False,
                 "trust_external": False,
-                "module_url": PANEL_JS,
+                "module_url": _panel_js_url(),
             }
         },
         require_admin=False,
@@ -83,7 +102,7 @@ async def _register_panel_custom(hass: HomeAssistant) -> None:
         webcomponent_name="tankwise-panel",
         sidebar_title="Tankwise",
         sidebar_icon="mdi:water-pump",
-        module_url=PANEL_JS,
+        module_url=_panel_js_url(),
         embed_iframe=False,
         require_admin=False,
     )
@@ -128,7 +147,7 @@ async def async_register_panel(hass: HomeAssistant) -> None:
                         "name": "tankwise-panel",
                         "embed_iframe": False,
                         "trust_external": False,
-                        "module_url": PANEL_JS,
+                        "module_url": _panel_js_url(),
                     }
                 },
                 require_admin=False,
