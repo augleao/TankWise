@@ -8,6 +8,7 @@
     busy: false,
     tab: "monitor",
     pollTimer: null,
+    entityQuery: { toggle_entities: "", led_entities: "" },
   };
 
   const $ = (id) => document.getElementById(id);
@@ -256,13 +257,97 @@
     el.innerHTML = opts.join("");
   }
 
+  function entityItems(domains, selectedIds) {
+    const list = mergeDomains(domains);
+    const selectedSet = new Set(selectedIds || []);
+    const items = list.map((item) => ({ ...item, selected: selectedSet.has(item.id) }));
+    for (const sid of selectedSet) {
+      if (sid && !list.some((x) => x.id === sid)) {
+        items.unshift({ id: sid, name: `${sid} (atual)`, selected: true });
+      }
+    }
+    return items;
+  }
+
+  function renderEntityPicker(el) {
+    if (!el || !state.config) return;
+    const key = el.dataset.picker;
+    const domains = String(el.dataset.domains || "")
+      .split(",")
+      .map((d) => d.trim())
+      .filter(Boolean);
+    const selected = Array.isArray(state.config[key]) ? state.config[key] : [];
+    const query = state.entityQuery[key] || "";
+    const q = query.trim().toLowerCase();
+    const items = entityItems(domains, selected).filter(
+      (item) =>
+        !q ||
+        item.name.toLowerCase().includes(q) ||
+        item.id.toLowerCase().includes(q)
+    );
+    const chips = selected
+      .map((id) => {
+        const found = entityItems(domains, selected).find((x) => x.id === id);
+        const label = found ? found.name : id;
+        return `<button type="button" class="chip" data-remove="${id}">${label} ×</button>`;
+      })
+      .join("");
+    const rows = items.length
+      ? items
+          .map(
+            (item) => `
+              <label class="entity-opt">
+                <input type="checkbox" value="${item.id}" ${item.selected ? "checked" : ""}>
+                <span>${item.name}</span>
+              </label>`
+          )
+          .join("")
+      : `<div class="entity-empty">Nenhuma entidade encontrada.</div>`;
+    el.innerHTML = `
+      <div class="chips">${chips || `<span class="chips-empty">Nenhuma selecionada</span>`}</div>
+      <input type="search" placeholder="Pesquisar entidade…" value="${query}" autocomplete="off">
+      <div class="entity-list">${rows}</div>
+    `;
+    const search = el.querySelector('input[type="search"]');
+    if (search) {
+      search.addEventListener("input", (ev) => {
+        state.entityQuery[key] = ev.target.value;
+        const pos = ev.target.selectionStart;
+        renderEntityPicker(el);
+        const again = el.querySelector('input[type="search"]');
+        if (again) {
+          again.focus();
+          try {
+            again.setSelectionRange(pos, pos);
+          } catch (_) {}
+        }
+      });
+    }
+    el.querySelectorAll(".chip[data-remove]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const id = btn.getAttribute("data-remove");
+        state.config[key] = selected.filter((x) => x !== id);
+        renderEntityPicker(el);
+      });
+    });
+    el.querySelectorAll('input[type="checkbox"]').forEach((box) => {
+      box.addEventListener("change", () => {
+        const set = new Set(selected);
+        if (box.checked) set.add(box.value);
+        else set.delete(box.value);
+        state.config[key] = Array.from(set);
+        renderEntityPicker(el);
+      });
+    });
+  }
+
   function bindConfigFields() {
     if (!state.config) return;
     const c = state.config;
     fillSelect($("pump_entity"), ["switch", "input_boolean"], c.pump_entity);
     fillSelect($("distance_entity"), ["sensor", "input_number", "number"], c.distance_entity);
-    fillSelect($("toggle_entities"), ["binary_sensor", "input_boolean", "switch"], c.toggle_entities || [], true);
-    fillSelect($("led_entities"), ["light", "switch", "input_boolean"], c.led_entities || [], true);
+    renderEntityPicker($("toggle_entities_picker"));
+    renderEntityPicker($("led_entities_picker"));
 
     const scalars = [
       "full_distance",
@@ -298,8 +383,12 @@
 
     payload.pump_entity = get("pump_entity").value || null;
     payload.distance_entity = get("distance_entity").value || null;
-    payload.toggle_entities = Array.from(get("toggle_entities").selectedOptions).map((o) => o.value);
-    payload.led_entities = Array.from(get("led_entities").selectedOptions).map((o) => o.value);
+    payload.toggle_entities = Array.isArray(state.config.toggle_entities)
+      ? state.config.toggle_entities
+      : [];
+    payload.led_entities = Array.isArray(state.config.led_entities)
+      ? state.config.led_entities
+      : [];
     payload.expose_percentage = get("expose_percentage").checked;
     payload.threshold_mode = get("threshold_mode")?.value || thresholdMode();
 

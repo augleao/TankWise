@@ -25,6 +25,7 @@ class TankwisePanel extends HTMLElement {
     this._section = "monitor"; // monitor | config | cycle | alerts | logs
     this._version = "";
     this._logs = [];
+    this._entityQuery = { toggle_entities: "", led_entities: "" };
   }
 
   set hass(hass) {
@@ -303,6 +304,67 @@ class TankwisePanel extends HTMLElement {
   }
 
 
+  _entityItems(domains, selectedIds) {
+    const list = this._mergeDomains(domains);
+    const selectedSet = new Set(selectedIds || []);
+    const items = list.map((item) => ({ ...item, selected: selectedSet.has(item.id) }));
+    for (const sid of selectedSet) {
+      if (sid && !list.some((x) => x.id === sid)) {
+        items.unshift({ id: sid, name: `${sid} (atual)`, selected: true });
+      }
+    }
+    return items;
+  }
+
+  _filterEntities(items, query) {
+    const q = String(query || "").trim().toLowerCase();
+    if (!q) return items;
+    return items.filter(
+      (item) => item.name.toLowerCase().includes(q) || item.id.toLowerCase().includes(q)
+    );
+  }
+
+  _setEntitySelected(key, entityId, selected) {
+    if (!this._config || !entityId) return;
+    const cur = new Set(this._list(key));
+    if (selected) cur.add(entityId);
+    else cur.delete(entityId);
+    this._config = { ...this._config, [key]: Array.from(cur) };
+  }
+
+  _entityMultiPicker(key, domains, hint) {
+    const selected = this._list(key);
+    const query = this._entityQuery[key] || "";
+    const items = this._filterEntities(this._entityItems(domains, selected), query);
+    const chips = selected
+      .map((id) => {
+        const found = this._entityItems(domains, selected).find((x) => x.id === id);
+        const label = found ? found.name : id;
+        return `<button type="button" class="chip" data-entity-remove="${this._esc(key)}" data-entity-id="${this._esc(id)}" title="Remover">${this._esc(label)} ×</button>`;
+      })
+      .join("");
+    const rows = items.length
+      ? items
+          .map(
+            (item) => `
+              <label class="entity-opt">
+                <input type="checkbox" data-entity-toggle="${this._esc(key)}" value="${this._esc(item.id)}" ${item.selected ? "checked" : ""}>
+                <span>${this._esc(item.name)}</span>
+              </label>`
+          )
+          .join("")
+      : `<div class="entity-empty">Nenhuma entidade encontrada.</div>`;
+    return `
+      <div class="entity-picker" data-entity-picker="${this._esc(key)}">
+        <div class="chips">${chips || `<span class="chips-empty">Nenhuma selecionada</span>`}</div>
+        <input type="search" placeholder="Pesquisar entidade…" data-entity-search="${this._esc(key)}" value="${this._esc(query)}" autocomplete="off">
+        <div class="entity-list">${rows}</div>
+        <div class="hint">${this._esc(hint)}</div>
+      </div>
+    `;
+  }
+
+
   _thresholdMode() {
     return this._val("threshold_mode", "distance") === "percent" ? "percent" : "distance";
   }
@@ -527,6 +589,31 @@ class TankwisePanel extends HTMLElement {
           background: #fbfcfb; color: #1c2b24; font-size: 0.95rem;
         }
         select[multiple] { min-height: 108px; }
+
+        .entity-picker { display: flex; flex-direction: column; gap: 8px; }
+        .chips { display: flex; flex-wrap: wrap; gap: 6px; min-height: 28px; align-items: center; }
+        .chips-empty { color: var(--tw-muted); font-size: 0.85rem; }
+        .chip {
+          border: 1px solid var(--tw-border); background: #e8f2ec; color: var(--tw-green-dark);
+          border-radius: 999px; padding: 4px 10px; font-size: 0.78rem; font-weight: 600; cursor: pointer;
+        }
+        .chip:hover { background: #d7ebe0; }
+        .entity-list {
+          max-height: 180px; overflow: auto; border: 1px solid var(--tw-border);
+          border-radius: 10px; background: #fbfcfb; padding: 6px;
+        }
+        .entity-opt {
+          display: flex; align-items: flex-start; gap: 8px; padding: 6px 8px;
+          border-radius: 8px; font-weight: 500; color: #1c2b24; cursor: pointer;
+        }
+        .entity-opt:hover { background: #eef5f1; }
+        .entity-opt input { width: auto; margin-top: 2px; }
+        .entity-empty { padding: 12px; color: var(--tw-muted); font-size: 0.85rem; }
+        input[type=search] {
+          width: 100%; box-sizing: border-box; padding: 10px 12px;
+          border-radius: 10px; border: 1px solid var(--tw-border);
+          background: #fbfcfb; color: #1c2b24; font-size: 0.95rem;
+        }
         .hint { font-size: 0.8rem; color: var(--tw-muted); margin-top: 4px; }
         .check { display: flex; align-items: center; gap: 8px; margin: 10px 0; color: #31463c; }
         .check input { width: auto; }
@@ -607,6 +694,36 @@ class TankwisePanel extends HTMLElement {
     btn("demand_on", () => this._setDemand(true));
     btn("demand_off", () => this._setDemand(false));
     btn("reconcile", () => this._reconcile());
+
+    root.querySelectorAll("[data-entity-search]").forEach((el) => {
+      el.oninput = (ev) => {
+        const key = el.getAttribute("data-entity-search");
+        this._entityQuery[key] = ev.target.value;
+        const pos = ev.target.selectionStart;
+        this._render();
+        const again = this.shadowRoot.querySelector(`[data-entity-search="${key}"]`);
+        if (again) {
+          again.focus();
+          try { again.setSelectionRange(pos, pos); } catch (_) {}
+        }
+      };
+    });
+    root.querySelectorAll("[data-entity-toggle]").forEach((el) => {
+      el.onchange = () => {
+        const key = el.getAttribute("data-entity-toggle");
+        this._setEntitySelected(key, el.value, el.checked);
+        this._render();
+      };
+    });
+    root.querySelectorAll("[data-entity-remove]").forEach((el) => {
+      el.onclick = () => {
+        const key = el.getAttribute("data-entity-remove");
+        const id = el.getAttribute("data-entity-id");
+        this._setEntitySelected(key, id, false);
+        this._render();
+      };
+    });
+
     btn("refresh_logs", async () => {
       this._busy = true;
       this._render();
@@ -761,21 +878,21 @@ class TankwisePanel extends HTMLElement {
                 )}</select>
                 <div class="hint">Preferir sensor em metros (ex.: sensor.cxdagua_distance), não o de %.</div>
               </div>
-              <div>
+                            <div style="grid-column: 1 / -1">
                 <label>Botões físicos (opcional)</label>
-                <select data-key="toggle_entities" multiple>${this._options(
+                ${this._entityMultiPicker(
+                  "toggle_entities",
                   ["binary_sensor", "input_boolean", "switch"],
-                  this._list("toggle_entities"),
-                  { multiple: true }
-                )}</select>
+                  "Pesquise e marque um ou mais botões. Cada um alterna a demanda da bomba (0↔1)."
+                )}
               </div>
-              <div>
+              <div style="grid-column: 1 / -1">
                 <label>LEDs / feedback (opcional)</label>
-                <select data-key="led_entities" multiple>${this._options(
+                ${this._entityMultiPicker(
+                  "led_entities",
                   ["light", "switch", "input_boolean"],
-                  this._list("led_entities"),
-                  { multiple: true }
-                )}</select>
+                  "Pesquise e marque um ou mais dispositivos que mostram o status da bomba (Controle da bomba)."
+                )}
               </div>
             </div>
           </div>

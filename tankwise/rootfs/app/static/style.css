@@ -216,6 +216,85 @@ select[multiple] {
   min-height: 108px;
 }
 
+.entity-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.entity-picker .chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 28px;
+  align-items: center;
+}
+
+.entity-picker .chips-empty {
+  color: var(--tw-muted);
+  font-size: 0.85rem;
+}
+
+.entity-picker .chip {
+  border: 1px solid var(--tw-border);
+  background: #e8f2ec;
+  color: var(--tw-green-dark);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.entity-picker .chip:hover {
+  background: #d7ebe0;
+}
+
+.entity-picker input[type="search"] {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--tw-border);
+  background: #fbfcfb;
+  color: var(--tw-ink);
+  font-size: 0.95rem;
+}
+
+.entity-picker .entity-list {
+  max-height: 180px;
+  overflow: auto;
+  border: 1px solid var(--tw-border);
+  border-radius: 10px;
+  background: #fbfcfb;
+  padding: 6px;
+}
+
+.entity-picker .entity-opt {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  font-weight: 500;
+  color: #1c2b24;
+  cursor: pointer;
+}
+
+.entity-picker .entity-opt:hover {
+  background: #eef5f1;
+}
+
+.entity-picker .entity-opt input {
+  width: auto;
+  margin-top: 2px;
+}
+
+.entity-picker .entity-empty {
+  padding: 12px;
+  color: var(--tw-muted);
+  font-size: 0.85rem;
+}
+
 .hint {
   font-size: 0.8rem;
   color: var(--tw-muted);

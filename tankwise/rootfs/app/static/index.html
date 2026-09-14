@@ -83,14 +83,15 @@
                 <label for="distance_entity">Sensor de distância</label>
                 <select id="distance_entity" data-key="distance_entity"></select>
               </div>
-              <div>
-                <label for="toggle_entities">Botões físicos (opcional)</label>
-                <select id="toggle_entities" data-key="toggle_entities" multiple></select>
-                <p class="hint">Segure Ctrl/Cmd para vários</p>
+              <div style="grid-column: 1 / -1">
+                <label>Botões físicos (opcional)</label>
+                <div class="entity-picker" id="toggle_entities_picker" data-picker="toggle_entities" data-domains="binary_sensor,input_boolean,switch"></div>
+                <p class="hint">Pesquise e marque um ou mais botões. Cada um alterna a demanda da bomba (0↔1).</p>
               </div>
-              <div>
-                <label for="led_entities">LEDs / indicadores (opcional)</label>
-                <select id="led_entities" data-key="led_entities" multiple></select>
+              <div style="grid-column: 1 / -1">
+                <label>LEDs / indicadores (opcional)</label>
+                <div class="entity-picker" id="led_entities_picker" data-picker="led_entities" data-domains="light,switch,input_boolean"></div>
+                <p class="hint">Pesquise e marque um ou mais dispositivos que mostram o status da bomba.</p>
               </div>
             </div>
             <div class="grid" style="margin-top: 12px">
