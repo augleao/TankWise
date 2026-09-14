@@ -74,6 +74,31 @@ def merge_entry_config(data: dict[str, Any], options: dict[str, Any]) -> dict[st
     return merged
 
 
+def normalize_notify_services(config: dict[str, Any]) -> list[str]:
+    """Return notify service targets from list or legacy single string."""
+    raw = config.get("notify_services")
+    if raw is None:
+        legacy = config.get("notify_service")
+        if isinstance(legacy, str) and legacy.strip():
+            return [legacy.strip()]
+        return []
+    if isinstance(raw, str):
+        return [part.strip() for part in raw.split(",") if part.strip()]
+    out: list[str] = []
+    for item in raw:
+        text = str(item).strip()
+        if text:
+            out.append(text)
+    return out
+
+
+def with_normalized_notify(config: dict[str, Any]) -> dict[str, Any]:
+    """Ensure config exposes notify_services as a list for the UI/API."""
+    normalized = dict(config)
+    normalized["notify_services"] = normalize_notify_services(normalized)
+    return normalized
+
+
 def is_on_condition(
     *,
     mode: str,

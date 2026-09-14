@@ -41,6 +41,7 @@ from .const import (
     CONF_LEVEL_NOTIFY_HOLD_SECONDS,
     CONF_LOW_LEVEL_PERCENT,
     CONF_NOTIFY_SERVICE,
+    CONF_NOTIFY_SERVICES,
     CONF_OFF_HOLD_SECONDS,
     CONF_OFF_THRESHOLD,
     CONF_ON_HOLD_SECONDS,
@@ -231,11 +232,22 @@ class TankwiseController:
         return list(raw)
 
     @property
+    def notify_services(self) -> list[str]:
+        raw = self.config.get(CONF_NOTIFY_SERVICES)
+        if raw is None:
+            legacy = self.config.get(CONF_NOTIFY_SERVICE)
+            if isinstance(legacy, str) and legacy.strip():
+                return [legacy.strip()]
+            return []
+        if isinstance(raw, str):
+            return [part.strip() for part in raw.split(",") if part.strip()]
+        return [str(item).strip() for item in raw if str(item).strip()]
+
+    @property
     def notify_service(self) -> str | None:
-        value = self.config.get(CONF_NOTIFY_SERVICE)
-        if not value:
-            return None
-        return str(value)
+        """Legacy single notify target (first configured service)."""
+        services = self.notify_services
+        return services[0] if services else None
 
     # ------------------------------------------------------------------ lifecycle
     async def async_setup(self) -> None:
@@ -639,7 +651,7 @@ class TankwiseController:
         await self._async_level_notifications(percent)
 
     async def _async_level_notifications(self, percent: float | None) -> None:
-        if percent is None or not self.notify_service:
+        if percent is None or not self.notify_services:
             return
         now = dt_util.utcnow()
         hold = int(
@@ -833,7 +845,7 @@ class TankwiseController:
                 target_on,
                 reason,
             )
-            if self.notify_service:
+            if self.notify_services:
                 await self._async_notify(
                     "Tankwise reconcile fault",
                     f"Could not set {self.pump_entity} to {'ON' if target_on else 'OFF'}.",
@@ -894,19 +906,20 @@ class TankwiseController:
                 _LOGGER.debug("LED sync failed for %s: %s", entity_id, err)
 
     async def _async_notify(self, title: str, message: str) -> None:
-        if not self.notify_service:
+        services = self.notify_services
+        if not services:
             return
-        service = self.notify_service
-        if service.startswith("notify."):
-            domain, name = service.split(".", 1)
-        else:
-            domain, name = "notify", service
-        try:
-            await self.hass.services.async_call(
-                domain,
-                name,
-                {"title": title, "message": message},
-                blocking=False,
-            )
-        except Exception as err:  # noqa: BLE001
-            _LOGGER.warning("Notify failed via %s: %s", self.notify_service, err)
+        for service in services:
+            if service.startswith("notify."):
+                domain, name = service.split(".", 1)
+            else:
+                domain, name = "notify", service
+            try:
+                await self.hass.services.async_call(
+                    domain,
+                    name,
+                    {"title": title, "message": message},
+                    blocking=False,
+                )
+            except Exception as err:  # noqa: BLE001
+                _LOGGER.warning("Notify failed via %s: %s", service, err)

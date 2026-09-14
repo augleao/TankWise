@@ -25,6 +25,7 @@ from .const import (
     CONF_LEVEL_NOTIFY_HOLD_SECONDS,
     CONF_LOW_LEVEL_PERCENT,
     CONF_NOTIFY_SERVICE,
+    CONF_NOTIFY_SERVICES,
     CONF_OFF_HOLD_SECONDS,
     CONF_OFF_THRESHOLD,
     CONF_ON_HOLD_SECONDS,
@@ -41,7 +42,7 @@ from .const import (
     CONF_WORK_MINUTES,
     DOMAIN,
 )
-from .helpers import merge_entry_config
+from .helpers import merge_entry_config, with_normalized_notify
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -81,7 +82,8 @@ UPDATE_SCHEMA = vol.Schema(
         vol.Optional(CONF_FAILSAFE_MARGIN_MINUTES): vol.Coerce(float),
         vol.Optional(CONF_TOGGLE_ENTITIES): vol.All(cv.ensure_list, [cv.entity_id]),
         vol.Optional(CONF_LED_ENTITIES): vol.All(cv.ensure_list, [cv.entity_id]),
-        vol.Optional(CONF_NOTIFY_SERVICE): cv.string,
+        vol.Optional(CONF_NOTIFY_SERVICES): vol.All(cv.ensure_list, [cv.string]),
+        vol.Optional(CONF_NOTIFY_SERVICE): cv.string,  # legacy
         vol.Optional(CONF_LOW_LEVEL_PERCENT): vol.Coerce(float),
         vol.Optional(CONF_CRITICAL_LEVEL_PERCENT): vol.Coerce(float),
         vol.Optional(CONF_LEVEL_NOTIFY_HOLD_SECONDS): vol.Coerce(int),
@@ -165,7 +167,7 @@ def entry_payload(hass: HomeAssistant, entry: ConfigEntry) -> dict[str, Any]:
         "entry_id": entry.entry_id,
         "title": entry.title,
         "version": integration_version(),
-        "config": config,
+        "config": with_normalized_notify(config),
         "status": status,
     }
 
@@ -176,11 +178,44 @@ def sanitize_updates(raw: dict[str, Any]) -> dict[str, Any]:
     for key, value in raw.items():
         if value is None:
             continue
-        if key in (CONF_TOGGLE_ENTITIES, CONF_LED_ENTITIES) and value == "":
+        if key in (CONF_TOGGLE_ENTITIES, CONF_LED_ENTITIES, CONF_NOTIFY_SERVICES) and value == "":
             cleaned[key] = []
             continue
         cleaned[key] = value
+
+    # Prefer list form; migrate legacy single notify_service when needed.
+    if CONF_NOTIFY_SERVICES in cleaned:
+        services = cleaned[CONF_NOTIFY_SERVICES]
+        if isinstance(services, str):
+            services = [part.strip() for part in services.split(",") if part.strip()]
+        else:
+            services = [str(item).strip() for item in services if str(item).strip()]
+        cleaned[CONF_NOTIFY_SERVICES] = services
+        cleaned[CONF_NOTIFY_SERVICE] = ""
+    elif CONF_NOTIFY_SERVICE in cleaned:
+        legacy = cleaned.pop(CONF_NOTIFY_SERVICE)
+        if isinstance(legacy, str) and legacy.strip():
+            cleaned[CONF_NOTIFY_SERVICES] = [legacy.strip()]
+        else:
+            cleaned[CONF_NOTIFY_SERVICES] = []
+        cleaned[CONF_NOTIFY_SERVICE] = ""
     return cleaned
+
+
+def list_notify_targets(hass: HomeAssistant) -> list[dict[str, str]]:
+    """List notify.* services and notify entities for the picker modal."""
+    items: dict[str, dict[str, str]] = {}
+    notify_services = hass.services.async_services().get("notify") or {}
+    for name in sorted(notify_services):
+        service_id = f"notify.{name}"
+        items[service_id] = {"id": service_id, "name": service_id}
+    for entity_id in sorted(hass.states.async_entity_ids("notify")):
+        state = hass.states.get(entity_id)
+        label = (
+            (state.attributes.get("friendly_name") if state else None) or entity_id
+        )
+        items[entity_id] = {"id": entity_id, "name": f"{label} ({entity_id})"}
+    return list(items.values())
 
 
 def list_picker_entities(hass: HomeAssistant) -> dict[str, list[dict[str, str]]]:
@@ -194,6 +229,7 @@ def list_picker_entities(hass: HomeAssistant) -> dict[str, list[dict[str, str]]]
             (state.attributes.get("friendly_name") if state else None) or entity_id
         )
         buckets[domain].append({"id": entity_id, "name": f"{name} ({entity_id})"})
+    buckets["notify"] = list_notify_targets(hass)
     return buckets
 
 

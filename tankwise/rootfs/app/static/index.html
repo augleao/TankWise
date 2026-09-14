@@ -179,9 +179,11 @@
             <h2>Notificações de nível</h2>
             <p class="desc">Opcional — avisa quando o nível fica baixo.</p>
             <div class="grid">
-              <div>
-                <label for="notify_service">Serviço notify (ex.: notify.mobile_app_xxx)</label>
-                <input id="notify_service" data-key="notify_service" type="text" placeholder="notify.…" />
+              <div style="grid-column: 1 / -1">
+                <label>Serviços notify</label>
+                <div class="entity-selected" id="notify_services_list"></div>
+                <button type="button" class="secondary" id="btn-add-notify">Adicionar notify</button>
+                <p class="hint">Pode adicionar vários destinos (celular, Telegram, etc.). Cada alerta é enviado a todos.</p>
               </div>
               <div>
                 <label for="low_level_percent">Alerta baixo (%)</label>
