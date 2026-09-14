@@ -146,6 +146,19 @@ def entry_payload(hass: HomeAssistant, entry: ConfigEntry) -> dict[str, Any]:
                 "reconcile_healthy": snap.reconcile_healthy,
                 "last_error": snap.last_error,
                 "reason": snap.reason,
+                **{
+                    k: snap.attributes.get(k)
+                    for k in (
+                        "threshold_mode",
+                        "on_threshold",
+                        "off_threshold",
+                        "on_hold_seconds",
+                        "off_hold_seconds",
+                        "on_hold_elapsed",
+                        "off_hold_elapsed",
+                    )
+                    if snap.attributes
+                },
             }
         )
     return {

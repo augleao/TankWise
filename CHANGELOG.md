@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.4] - 2026-09-14
+
+### Fixed
+- Demand hysteresis now re-evaluates every **5s**, not only on distance state changes or the reconcile interval. With a stable ultrasonic reading and hold=120s / reconcile=120s, demand could previously take ~240s (or never seem to fire).
+- Logs tab now renders the event list (button existed, content section was missing).
+- Monitor shows live hold progress (elapsed/target) while waiting to turn demand on/off.
+
 ## [0.4.3] - 2026-09-14
 
 ### Fixed
