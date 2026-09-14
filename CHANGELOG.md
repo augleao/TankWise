@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.3] - 2026-09-14
+
+### Fixed
+- Sidebar panel JS cache bust used a stale hardcoded `?v=0.3.1`, so browsers kept the old UI without the Distância / Porcentagem (%) toggle. Cache bust now follows `manifest.json` version (`?v=0.4.3`).
+
 ## [0.4.2] - 2026-03-22
 
 ### Added
