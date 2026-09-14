@@ -26,6 +26,8 @@ from .const import (
     CONF_OFF_THRESHOLD,
     CONF_ON_HOLD_SECONDS,
     CONF_ON_THRESHOLD,
+    CONF_THRESHOLD_MODE,
+    DEFAULT_THRESHOLD_MODE,
     CONF_PUMP_ENTITY,
     CONF_RECONCILE_INTERVAL,
     CONF_RECONCILE_RETRIES,
@@ -56,6 +58,7 @@ def _defaults_from_calibration(full: float, empty: float) -> dict[str, Any]:
         CONF_FULL_DISTANCE: full,
         CONF_EMPTY_DISTANCE: empty,
         CONF_EXPOSE_PERCENTAGE: DEFAULT_EXPOSE_PERCENTAGE,
+        CONF_THRESHOLD_MODE: DEFAULT_THRESHOLD_MODE,
         CONF_ON_THRESHOLD: round(full + span * 0.70, 3),
         CONF_OFF_THRESHOLD: round(full + span * 0.05, 3),
         CONF_ON_HOLD_SECONDS: DEFAULT_ON_HOLD_SECONDS,
@@ -171,6 +174,9 @@ class TankwiseOptionsFlow(config_entries.OptionsFlow):
             off_th = float(user_input[CONF_OFF_THRESHOLD])
             if empty <= full:
                 errors["base"] = "empty_must_be_greater"
+            elif str(user_input.get(CONF_THRESHOLD_MODE, current.get(CONF_THRESHOLD_MODE, DEFAULT_THRESHOLD_MODE))) == "percent":
+                if on_th >= off_th:
+                    errors["base"] = "on_percent_must_be_less"
             elif on_th <= off_th:
                 errors["base"] = "on_must_be_greater"
             else:
@@ -192,6 +198,18 @@ class TankwiseOptionsFlow(config_entries.OptionsFlow):
                 ): selector.NumberSelector(
                     selector.NumberSelectorConfig(
                         min=0, max=10000, step=0.01, mode=selector.NumberSelectorMode.BOX
+                    )
+                ),
+                vol.Required(
+                    CONF_THRESHOLD_MODE,
+                    default=str(current.get(CONF_THRESHOLD_MODE, DEFAULT_THRESHOLD_MODE)),
+                ): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=[
+                            {"value": "distance", "label": "Distance"},
+                            {"value": "percent", "label": "Percent (%)"},
+                        ],
+                        mode=selector.SelectSelectorMode.DROPDOWN,
                     )
                 ),
                 vol.Required(

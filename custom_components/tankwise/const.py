@@ -17,6 +17,9 @@ CONF_EXPOSE_PERCENTAGE: Final = "expose_percentage"
 
 CONF_ON_THRESHOLD: Final = "on_threshold"
 CONF_OFF_THRESHOLD: Final = "off_threshold"
+CONF_THRESHOLD_MODE: Final = "threshold_mode"
+THRESHOLD_MODE_DISTANCE: Final = "distance"
+THRESHOLD_MODE_PERCENT: Final = "percent"
 CONF_ON_HOLD_SECONDS: Final = "on_hold_seconds"
 CONF_OFF_HOLD_SECONDS: Final = "off_hold_seconds"
 
@@ -51,6 +54,9 @@ DEFAULT_LOW_LEVEL_PERCENT: Final = 60.0
 DEFAULT_CRITICAL_LEVEL_PERCENT: Final = 25.0
 DEFAULT_LEVEL_NOTIFY_HOLD_SECONDS: Final = 120
 DEFAULT_EXPOSE_PERCENTAGE: Final = True
+DEFAULT_THRESHOLD_MODE: Final = THRESHOLD_MODE_DISTANCE
+DEFAULT_ON_PERCENT: Final = 30.0
+DEFAULT_OFF_PERCENT: Final = 95.0
 
 # Attributes / events
 ATTR_REASON: Final = "reason"

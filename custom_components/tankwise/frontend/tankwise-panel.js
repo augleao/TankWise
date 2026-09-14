@@ -287,6 +287,68 @@ class TankwisePanel extends HTMLElement {
     return opts.join("");
   }
 
+
+  _thresholdMode() {
+    return this._val("threshold_mode", "distance") === "percent" ? "percent" : "distance";
+  }
+
+  _distanceToPercent(distance) {
+    const full = this._num("full_distance", 0.25);
+    const empty = this._num("empty_distance", 0.47);
+    if (empty <= full) return null;
+    const pct = ((empty - Number(distance)) / (empty - full)) * 100;
+    if (!Number.isFinite(pct)) return null;
+    return Math.max(0, Math.min(100, pct));
+  }
+
+  _percentToDistance(percent) {
+    const full = this._num("full_distance", 0.25);
+    const empty = this._num("empty_distance", 0.47);
+    if (empty <= full) return null;
+    const pct = Math.max(0, Math.min(100, Number(percent)));
+    if (!Number.isFinite(pct)) return null;
+    return empty - (pct / 100) * (empty - full);
+  }
+
+  _setThresholdMode(mode) {
+    if (!this._config) return;
+    const cur = this._thresholdMode();
+    if (mode === cur) return;
+    let on = this._num("on_threshold", mode === "percent" ? 30 : 0.4);
+    let off = this._num("off_threshold", mode === "percent" ? 95 : 0.28);
+    if (mode === "percent" && cur === "distance") {
+      const onP = this._distanceToPercent(on);
+      const offP = this._distanceToPercent(off);
+      on = onP == null ? 30 : Number(onP.toFixed(1));
+      off = offP == null ? 95 : Number(offP.toFixed(1));
+      // Ensure percent ordering on < off
+      if (on >= off) {
+        on = 30;
+        off = 95;
+      }
+    } else if (mode === "distance" && cur === "percent") {
+      const onD = this._percentToDistance(on);
+      const offD = this._percentToDistance(off);
+      on = onD == null ? 0.4 : Number(onD.toFixed(3));
+      off = offD == null ? 0.28 : Number(offD.toFixed(3));
+      // Ensure distance ordering on > off
+      if (on <= off) {
+        const full = this._num("full_distance", 0.25);
+        const empty = this._num("empty_distance", 0.47);
+        const span = Math.max(empty - full, 0.001);
+        on = Number((full + span * 0.7).toFixed(3));
+        off = Number((full + span * 0.05).toFixed(3));
+      }
+    }
+    this._config = {
+      ...this._config,
+      threshold_mode: mode,
+      on_threshold: on,
+      off_threshold: off,
+    };
+    this._render();
+  }
+
   _percent() {
     const st = this._status || {};
     if (st.percent !== null && st.percent !== undefined && Number.isFinite(Number(st.percent))) {
@@ -381,6 +443,7 @@ class TankwisePanel extends HTMLElement {
           display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: center;
         }
         .hero h1 { margin: 0; font-size: 1.75rem; color: var(--tw-green-dark); letter-spacing: -0.02em; }
+        .mode-row { display: flex; gap: 8px; flex-wrap: wrap; margin: 6px 0 4px; }
         .ver { font-size: 0.95rem; font-weight: 600; color: var(--tw-muted); margin-left: 6px; }
         .log-box { max-height: 420px; overflow: auto; border: 1px solid var(--tw-border); border-radius: 12px; background: #f7faf8; }
         .log-row { display: grid; grid-template-columns: 160px 160px 1fr; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--tw-border); font-size: 0.82rem; }
@@ -508,6 +571,9 @@ class TankwisePanel extends HTMLElement {
         this._render();
       };
     }
+    root.querySelectorAll("[data-threshold-mode]").forEach((el) => {
+      el.onclick = () => this._setThresholdMode(el.getAttribute("data-threshold-mode"));
+    });
     root.querySelectorAll("[data-tab]").forEach((el) => {
       el.onclick = async () => {
         this._section = el.getAttribute("data-tab");
@@ -701,6 +767,28 @@ class TankwisePanel extends HTMLElement {
                 <label>Distância vazio</label>
                 <input type="number" step="any" data-key="empty_distance" value="${this._esc(this._val("empty_distance", 0.47))}">
               </div>
+              <div style="grid-column: 1 / -1">
+                <label>Unidade dos limiares</label>
+                <div class="mode-row">
+                  <button type="button" class="tab ${this._thresholdMode() === "distance" ? "active" : ""}" data-threshold-mode="distance">Distância</button>
+                  <button type="button" class="tab ${this._thresholdMode() === "percent" ? "active" : ""}" data-threshold-mode="percent">Porcentagem (%)</button>
+                </div>
+                <div class="hint">Escolha se os limiares de ligar/desligar são em distância do sensor ou em % do nível da caixa.</div>
+              </div>
+              ${
+                this._thresholdMode() === "percent"
+                  ? `
+              <div>
+                <label>Ligar demanda abaixo de (%)</label>
+                <input type="number" step="0.1" min="0" max="100" data-key="on_threshold" value="${this._esc(this._val("on_threshold", 30))}">
+                <div class="hint">Liga quando o nível fica ≤ este %. Deve ser menor que o limiar de desligar (ex.: 30).</div>
+              </div>
+              <div>
+                <label>Desligar demanda acima de (%)</label>
+                <input type="number" step="0.1" min="0" max="100" data-key="off_threshold" value="${this._esc(this._val("off_threshold", 95))}">
+                <div class="hint">Desliga quando o nível fica ≥ este % (ex.: 95).</div>
+              </div>`
+                  : `
               <div>
                 <label>Limiar ligar demanda (distância ≥)</label>
                 <input type="number" step="any" data-key="on_threshold" value="${this._esc(this._val("on_threshold", 0.4))}">
@@ -710,7 +798,8 @@ class TankwisePanel extends HTMLElement {
                 <label>Limiar desligar demanda (distância ≤)</label>
                 <input type="number" step="any" data-key="off_threshold" value="${this._esc(this._val("off_threshold", 0.28))}">
                 <div class="hint">Desliga quando a distância fica abaixo deste valor (caixa mais cheia).</div>
-              </div>
+              </div>`
+              }
               <div>
                 <label>Hold ligar (s)</label>
                 <input type="number" step="1" min="0" data-key="on_hold_seconds" value="${this._esc(this._val("on_hold_seconds", 120))}">

@@ -1,3 +1,8 @@
+## 1.0.2
+
+- Seletor de limiares em distância ou %
+- Conversão automática ao trocar a unidade
+
 ## 1.0.1
 
 - Proxy de logs da integração

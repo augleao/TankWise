@@ -24,6 +24,22 @@ def distance_to_percent(
     return max(0.0, min(100.0, raw))
 
 
+def percent_to_distance(
+    percent: float,
+    full_distance: float,
+    empty_distance: float,
+) -> float | None:
+    """Convert fill % into distance-to-water.
+
+    100% -> full_distance, 0% -> empty_distance.
+    """
+    span = empty_distance - full_distance
+    if span <= 0:
+        return None
+    pct = max(0.0, min(100.0, percent))
+    return empty_distance - (pct / 100.0) * span
+
+
 def parse_float(state: State | None) -> float | None:
     """Parse a numeric entity state, or None if unavailable/unknown."""
     if state is None or state.state in (None, "unknown", "unavailable"):
@@ -56,3 +72,33 @@ def merge_entry_config(data: dict[str, Any], options: dict[str, Any]) -> dict[st
     merged = dict(data)
     merged.update(options)
     return merged
+
+
+def is_on_condition(
+    *,
+    mode: str,
+    distance: float,
+    percent: float | None,
+    on_threshold: float,
+) -> bool:
+    """Return True when the tank is empty enough to request demand ON."""
+    if mode == "percent":
+        if percent is None:
+            return False
+        return percent <= on_threshold
+    return distance > on_threshold
+
+
+def is_off_condition(
+    *,
+    mode: str,
+    distance: float,
+    percent: float | None,
+    off_threshold: float,
+) -> bool:
+    """Return True when the tank is full enough to force demand OFF."""
+    if mode == "percent":
+        if percent is None:
+            return False
+        return percent >= off_threshold
+    return distance < off_threshold

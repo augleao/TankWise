@@ -22,6 +22,8 @@
     },
     "error": {
       "empty_must_be_greater": "A distância de vazio deve ser maior que a de cheio.",
+      "on_percent_must_be_less": "No modo porcentagem, o % de ligar deve ser menor que o % de desligar.",
+      "on_percent_must_be_less": "No modo porcentagem, o % de ligar deve ser menor que o % de desligar.",
       "on_must_be_greater": "O limiar de ligar deve ser maior que o de desligar (distância maior = caixa mais vazia)."
     },
     "abort": {

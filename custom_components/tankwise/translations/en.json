@@ -22,6 +22,8 @@
     },
     "error": {
       "empty_must_be_greater": "Empty tank distance must be greater than full tank distance.",
+      "on_percent_must_be_less": "In percent mode, turn-on % must be less than turn-off %.",
+      "on_percent_must_be_less": "In percent mode, turn-on % must be less than turn-off %.",
       "on_must_be_greater": "On threshold must be greater than off threshold (higher distance = emptier tank)."
     },
     "abort": {

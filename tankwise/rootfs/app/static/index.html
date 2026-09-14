@@ -115,14 +115,21 @@
 
           <section class="card" data-panel="cycle" hidden>
             <h2>Histerese e ciclo trabalho/descanso</h2>
-            <p class="desc">Limiares em distância (mesmo sentido do sensor).</p>
+            <p class="desc">Escolha limiares em distância ou em % do nível.</p>
             <div class="grid">
+              <div style="grid-column: 1 / -1">
+                <label for="threshold_mode">Unidade dos limiares</label>
+                <select id="threshold_mode" data-key="threshold_mode">
+                  <option value="distance">Distância</option>
+                  <option value="percent">Porcentagem (%)</option>
+                </select>
+              </div>
               <div>
-                <label for="on_threshold">Liga abaixo de (on)</label>
+                <label for="on_threshold" id="label_on_threshold">Limiar ligar</label>
                 <input id="on_threshold" data-key="on_threshold" type="number" step="any" />
               </div>
               <div>
-                <label for="off_threshold">Desliga acima de (off)</label>
+                <label for="off_threshold" id="label_off_threshold">Limiar desligar</label>
                 <input id="off_threshold" data-key="off_threshold" type="number" step="any" />
               </div>
               <div>

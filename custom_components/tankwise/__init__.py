@@ -149,12 +149,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data.setdefault(DOMAIN, {})
     config = merge_entry_config(dict(entry.data), dict(entry.options))
 
-    # Migrate inverted thresholds from older builds (on < off).
-    # Correct ultrasonic semantics: on_threshold > off_threshold.
+    # Migrate inverted distance thresholds from older builds (on < off).
+    # Only applies in distance mode. Percent mode uses on% < off%.
     try:
+        mode = str(config.get("threshold_mode", "distance") or "distance")
         on_th = float(config.get("on_threshold", 0))
         off_th = float(config.get("off_threshold", 0))
-        if on_th and off_th and on_th < off_th:
+        if mode != "percent" and on_th and off_th and on_th < off_th:
             _LOGGER.warning(
                 "Tankwise migrating inverted thresholds on=%s off=%s -> swapped",
                 on_th,

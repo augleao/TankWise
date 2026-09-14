@@ -23,6 +23,81 @@
     el.textContent = message;
   }
 
+
+  function thresholdMode() {
+    return (state.config && state.config.threshold_mode) === "percent" ? "percent" : "distance";
+  }
+
+  function distanceToPercent(distance) {
+    const full = Number(state.config?.full_distance ?? 0.25);
+    const empty = Number(state.config?.empty_distance ?? 0.47);
+    if (!(empty > full)) return null;
+    const pct = ((empty - Number(distance)) / (empty - full)) * 100;
+    return Number.isFinite(pct) ? Math.max(0, Math.min(100, pct)) : null;
+  }
+
+  function percentToDistance(percent) {
+    const full = Number(state.config?.full_distance ?? 0.25);
+    const empty = Number(state.config?.empty_distance ?? 0.47);
+    if (!(empty > full)) return null;
+    const pct = Math.max(0, Math.min(100, Number(percent)));
+    return Number.isFinite(pct) ? empty - (pct / 100) * (empty - full) : null;
+  }
+
+  function updateThresholdLabels() {
+    const mode = thresholdMode();
+    const onL = $("label_on_threshold");
+    const offL = $("label_off_threshold");
+    if (onL) onL.textContent = mode === "percent" ? "Ligar abaixo de (%)" : "Limiar ligar (distância ≥)";
+    if (offL) offL.textContent = mode === "percent" ? "Desligar acima de (%)" : "Limiar desligar (distância ≤)";
+    const on = $("on_threshold");
+    const off = $("off_threshold");
+    if (on) {
+      on.step = mode === "percent" ? "0.1" : "any";
+      if (mode === "percent") { on.min = "0"; on.max = "100"; } else { on.removeAttribute("min"); on.removeAttribute("max"); }
+    }
+    if (off) {
+      off.step = mode === "percent" ? "0.1" : "any";
+      if (mode === "percent") { off.min = "0"; off.max = "100"; } else { off.removeAttribute("min"); off.removeAttribute("max"); }
+    }
+  }
+
+  function setThresholdMode(mode) {
+    if (!state.config) return;
+    const cur = thresholdMode();
+    if (mode === cur) return;
+    let on = Number(state.config.on_threshold);
+    let off = Number(state.config.off_threshold);
+    if (mode === "percent" && cur === "distance") {
+      on = distanceToPercent(on) ?? 30;
+      off = distanceToPercent(off) ?? 95;
+      if (on >= off) { on = 30; off = 95; }
+      on = Number(on.toFixed(1));
+      off = Number(off.toFixed(1));
+    } else if (mode === "distance" && cur === "percent") {
+      on = percentToDistance(on) ?? 0.4;
+      off = percentToDistance(off) ?? 0.28;
+      if (on <= off) {
+        const full = Number(state.config.full_distance ?? 0.25);
+        const empty = Number(state.config.empty_distance ?? 0.47);
+        const span = Math.max(empty - full, 0.001);
+        on = Number((full + span * 0.7).toFixed(3));
+        off = Number((full + span * 0.05).toFixed(3));
+      } else {
+        on = Number(on.toFixed(3));
+        off = Number(off.toFixed(3));
+      }
+    }
+    state.config.threshold_mode = mode;
+    state.config.on_threshold = on;
+    state.config.off_threshold = off;
+    const modeEl = $("threshold_mode");
+    if (modeEl) modeEl.value = mode;
+    if ($("on_threshold")) $("on_threshold").value = on;
+    if ($("off_threshold")) $("off_threshold").value = off;
+    updateThresholdLabels();
+  }
+
   async function api(path, options = {}) {
     const res = await fetch(`api${path}`, {
       headers: { "Content-Type": "application/json", ...(options.headers || {}) },
@@ -226,6 +301,7 @@
     payload.toggle_entities = Array.from(get("toggle_entities").selectedOptions).map((o) => o.value);
     payload.led_entities = Array.from(get("led_entities").selectedOptions).map((o) => o.value);
     payload.expose_percentage = get("expose_percentage").checked;
+    payload.threshold_mode = get("threshold_mode")?.value || thresholdMode();
 
     const numberKeys = [
       "full_distance",
@@ -279,6 +355,8 @@
     $("app").hidden = false;
     renderMonitor();
     bindConfigFields();
+    if ($("threshold_mode")) $("threshold_mode").value = thresholdMode();
+    updateThresholdLabels();
   }
 
   async function refresh() {
@@ -419,6 +497,11 @@
   }
 
   function wire() {
+    const modeEl = $("threshold_mode");
+    if (modeEl) {
+      modeEl.addEventListener("change", (ev) => setThresholdMode(ev.target.value));
+    }
+
     document.querySelectorAll(".tab").forEach((el) => {
       el.addEventListener("click", () => switchTab(el.dataset.tab));
     });

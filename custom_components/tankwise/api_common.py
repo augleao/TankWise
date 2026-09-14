@@ -29,6 +29,10 @@ from .const import (
     CONF_OFF_THRESHOLD,
     CONF_ON_HOLD_SECONDS,
     CONF_ON_THRESHOLD,
+    CONF_THRESHOLD_MODE,
+    DEFAULT_THRESHOLD_MODE,
+    THRESHOLD_MODE_DISTANCE,
+    THRESHOLD_MODE_PERCENT,
     CONF_PUMP_ENTITY,
     CONF_RECONCILE_INTERVAL,
     CONF_RECONCILE_RETRIES,
@@ -65,6 +69,7 @@ UPDATE_SCHEMA = vol.Schema(
         vol.Optional(CONF_FULL_DISTANCE): vol.Coerce(float),
         vol.Optional(CONF_EMPTY_DISTANCE): vol.Coerce(float),
         vol.Optional(CONF_EXPOSE_PERCENTAGE): cv.boolean,
+        vol.Optional(CONF_THRESHOLD_MODE): vol.In([THRESHOLD_MODE_DISTANCE, THRESHOLD_MODE_PERCENT]),
         vol.Optional(CONF_ON_THRESHOLD): vol.Coerce(float),
         vol.Optional(CONF_OFF_THRESHOLD): vol.Coerce(float),
         vol.Optional(CONF_ON_HOLD_SECONDS): vol.Coerce(int),
@@ -191,8 +196,23 @@ async def apply_config_updates(
 
     if float(merged[CONF_EMPTY_DISTANCE]) <= float(merged[CONF_FULL_DISTANCE]):
         raise vol.Invalid("Empty distance must be greater than full distance")
-    if float(merged[CONF_ON_THRESHOLD]) <= float(merged[CONF_OFF_THRESHOLD]):
-        raise vol.Invalid("On threshold must be greater than off threshold (ligar > desligar: distância maior = mais vazio)")
+    mode = str(merged.get(CONF_THRESHOLD_MODE, DEFAULT_THRESHOLD_MODE) or DEFAULT_THRESHOLD_MODE)
+    on_th = float(merged[CONF_ON_THRESHOLD])
+    off_th = float(merged[CONF_OFF_THRESHOLD])
+    if mode == THRESHOLD_MODE_PERCENT:
+        if not (0 <= on_th <= 100 and 0 <= off_th <= 100):
+            raise vol.Invalid("Percent thresholds must be between 0 and 100")
+        if on_th >= off_th:
+            raise vol.Invalid(
+                "In percent mode, on threshold must be less than off "
+                "(e.g. turn on at 30%, turn off at 95%)"
+            )
+    else:
+        if on_th <= off_th:
+            raise vol.Invalid(
+                "In distance mode, on threshold must be greater than off "
+                "(ligar > desligar: higher distance = emptier)"
+            )
 
     new_data = dict(entry.data)
     new_options = dict(entry.options)

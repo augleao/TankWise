@@ -45,6 +45,9 @@ from .const import (
     CONF_OFF_THRESHOLD,
     CONF_ON_HOLD_SECONDS,
     CONF_ON_THRESHOLD,
+    CONF_THRESHOLD_MODE,
+    DEFAULT_THRESHOLD_MODE,
+    THRESHOLD_MODE_PERCENT,
     CONF_PUMP_ENTITY,
     CONF_RECONCILE_INTERVAL,
     CONF_RECONCILE_RETRIES,
@@ -74,7 +77,13 @@ from .const import (
     STORAGE_KEY,
     STORAGE_VERSION,
 )
-from .helpers import distance_to_percent, is_on_state, parse_float
+from .helpers import (
+    distance_to_percent,
+    is_off_condition,
+    is_on_condition,
+    is_on_state,
+    parse_float,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -163,6 +172,11 @@ class TankwiseController:
     @property
     def off_threshold(self) -> float:
         return float(self.config.get(CONF_OFF_THRESHOLD, DEFAULT_OFF_THRESHOLD))
+
+    @property
+    def threshold_mode(self) -> str:
+        mode = str(self.config.get(CONF_THRESHOLD_MODE, DEFAULT_THRESHOLD_MODE) or DEFAULT_THRESHOLD_MODE)
+        return THRESHOLD_MODE_PERCENT if mode == THRESHOLD_MODE_PERCENT else "distance"
 
     @property
     def on_hold(self) -> int:
@@ -367,16 +381,32 @@ class TankwiseController:
 
         if desired_on and not force:
             distance = parse_float(self.hass.states.get(self.distance_entity))
-            # Full tank = low distance. Block ON when already at/below off threshold.
-            if distance is not None and distance <= self.off_threshold:
+            percent = (
+                distance_to_percent(distance, self.full_distance, self.empty_distance)
+                if distance is not None
+                else None
+            )
+            if distance is not None and is_off_condition(
+                mode=self.threshold_mode,
+                distance=distance,
+                percent=percent,
+                off_threshold=self.off_threshold,
+            ):
                 _LOGGER.info(
-                    "Ignoring demand ON (tank full: distance=%.3f <= %.3f)",
+                    "Ignoring demand ON (tank full: mode=%s distance=%s percent=%s off=%s)",
+                    self.threshold_mode,
                     distance,
+                    percent,
                     self.off_threshold,
                 )
                 desired_on = False
                 reason = "blocked_full_level"
-                self._log("blocked_full_level", distance=distance)
+                self._log(
+                    "blocked_full_level",
+                    distance=distance,
+                    percent=percent,
+                    mode=self.threshold_mode,
+                )
 
         changed = desired_on != self.desired_on
         self.desired_on = desired_on
@@ -457,7 +487,17 @@ class TankwiseController:
         """Reconcile safely after Home Assistant start."""
         self._started = True
         distance = parse_float(self.hass.states.get(self.distance_entity))
-        if distance is not None and distance <= self.off_threshold:
+        percent = (
+            distance_to_percent(distance, self.full_distance, self.empty_distance)
+            if distance is not None
+            else None
+        )
+        if distance is not None and is_off_condition(
+            mode=self.threshold_mode,
+            distance=distance,
+            percent=percent,
+            off_threshold=self.off_threshold,
+        ):
             await self.async_set_demand(False, reason="boot_full_level", force=True)
         else:
             await self.async_reconcile(reason="boot_recovery")
@@ -512,15 +552,29 @@ class TankwiseController:
             distance, self.full_distance, self.empty_distance
         )
 
-        # Ultrasonic: higher distance = emptier tank.
-        # Turn ON when distance stays ABOVE on threshold (empty enough).
-        if distance > self.on_threshold:
+        on_cond = is_on_condition(
+            mode=self.threshold_mode,
+            distance=distance,
+            percent=percent,
+            on_threshold=self.on_threshold,
+        )
+        off_cond = is_off_condition(
+            mode=self.threshold_mode,
+            distance=distance,
+            percent=percent,
+            off_threshold=self.off_threshold,
+        )
+
+        # Empty enough -> arm ON (hold)
+        if on_cond:
             if self._on_condition_since is None:
                 self._on_condition_since = now
                 self._log(
                     "on_condition_armed",
                     distance=distance,
+                    percent=percent,
                     threshold=self.on_threshold,
+                    mode=self.threshold_mode,
                     hold_s=self.on_hold,
                 )
             held = (now - self._on_condition_since).total_seconds()
@@ -528,17 +582,19 @@ class TankwiseController:
                 await self.async_set_demand(True, reason="hysteresis_on")
         else:
             if self._on_condition_since is not None:
-                self._log("on_condition_cleared", distance=distance)
+                self._log("on_condition_cleared", distance=distance, percent=percent)
             self._on_condition_since = None
 
-        # Turn OFF when distance stays BELOW off threshold (full enough).
-        if distance < self.off_threshold:
+        # Full enough -> arm OFF (hold)
+        if off_cond:
             if self._off_condition_since is None:
                 self._off_condition_since = now
                 self._log(
                     "off_condition_armed",
                     distance=distance,
+                    percent=percent,
                     threshold=self.off_threshold,
+                    mode=self.threshold_mode,
                     hold_s=self.off_hold,
                 )
             held = (now - self._off_condition_since).total_seconds()
@@ -546,7 +602,7 @@ class TankwiseController:
                 await self.async_set_demand(False, reason="hysteresis_off", force=True)
         else:
             if self._off_condition_since is not None:
-                self._log("off_condition_cleared", distance=distance)
+                self._log("off_condition_cleared", distance=distance, percent=percent)
             self._off_condition_since = None
 
         await self._async_level_notifications(percent)
@@ -656,8 +712,17 @@ class TankwiseController:
             return False
         if not self.desired_on:
             return False
-        if distance is not None and distance <= self.off_threshold:
-            return False
+        if distance is not None:
+            percent = distance_to_percent(
+                distance, self.full_distance, self.empty_distance
+            )
+            if is_off_condition(
+                mode=self.threshold_mode,
+                distance=distance,
+                percent=percent,
+                off_threshold=self.off_threshold,
+            ):
+                return False
         if self.cyclic_mode and self.cycle_phase == PHASE_RESTING:
             return False
         return True
@@ -667,8 +732,18 @@ class TankwiseController:
         """Ensure the physical pump matches desired demand + safety."""
         distance = parse_float(self.hass.states.get(self.distance_entity))
 
-        # Full-tank safety: force desired OFF and pump OFF when distance is low (full).
-        if distance is not None and distance <= self.off_threshold:
+        # Full-tank safety: force desired OFF and pump OFF when full enough.
+        percent = (
+            distance_to_percent(distance, self.full_distance, self.empty_distance)
+            if distance is not None
+            else None
+        )
+        if distance is not None and is_off_condition(
+            mode=self.threshold_mode,
+            distance=distance,
+            percent=percent,
+            off_threshold=self.off_threshold,
+        ):
             if self.desired_on:
                 self.desired_on = False
                 self.reason = "safety_full_level"
