@@ -18,6 +18,7 @@ class TankwisePanel extends HTMLElement {
       input_boolean: [],
       input_number: [],
       number: [],
+      notify: [],
     };
     this._busy = false;
     this._msg = "";
@@ -77,16 +78,33 @@ class TankwisePanel extends HTMLElement {
       input_boolean: [],
       input_number: [],
       number: [],
+      notify: [],
     };
     Object.keys(states)
       .sort()
       .forEach((eid) => {
         const domain = eid.split(".")[0];
-        if (buckets[domain]) {
+        if (buckets[domain] && domain !== "notify") {
           const name = states[eid].attributes.friendly_name || eid;
           buckets[domain].push({ id: eid, name: `${name} (${eid})` });
         }
       });
+    const notifyMap = new Map();
+    const notifyServices = (this._hass.services && this._hass.services.notify) || {};
+    Object.keys(notifyServices)
+      .sort()
+      .forEach((name) => {
+        const id = `notify.${name}`;
+        notifyMap.set(id, { id, name: id });
+      });
+    Object.keys(states)
+      .sort()
+      .forEach((eid) => {
+        if (!eid.startsWith("notify.")) return;
+        const label = states[eid].attributes.friendly_name || eid;
+        notifyMap.set(eid, { id: eid, name: `${label} (${eid})` });
+      });
+    buckets.notify = Array.from(notifyMap.values());
     this._entities = buckets;
   }
 
@@ -101,6 +119,11 @@ class TankwisePanel extends HTMLElement {
         const still = this._entries.find((e) => e.entry_id === this._selected);
         if (still) {
           this._config = { ...still.config };
+          if (!Array.isArray(this._config.notify_services)) {
+            const legacy = this._config.notify_service;
+            this._config.notify_services =
+              typeof legacy === "string" && legacy.trim() ? [legacy.trim()] : [];
+          }
           this._status = still.status;
           this._version = still.version || this._version || "";
         } else {
@@ -134,6 +157,11 @@ class TankwisePanel extends HTMLElement {
   async _loadConfig(entryId) {
     const res = await this._ws("tankwise/get_config", { entry_id: entryId });
     this._config = { ...res.config };
+    if (!Array.isArray(this._config.notify_services)) {
+      const legacy = this._config.notify_service;
+      this._config.notify_services =
+        typeof legacy === "string" && legacy.trim() ? [legacy.trim()] : [];
+    }
     this._status = res.status;
     this._selected = entryId;
   }
@@ -183,10 +211,10 @@ class TankwisePanel extends HTMLElement {
         if (value === null || value === undefined) continue;
         payload[key] = value;
       }
-      for (const key of ["toggle_entities", "led_entities"]) {
+      for (const key of ["toggle_entities", "led_entities", "notify_services"]) {
         if (!Array.isArray(payload[key])) payload[key] = [];
       }
-      if (payload.notify_service == null) payload.notify_service = "";
+      delete payload.notify_service;
       const res = await this._ws("tankwise/update_config", {
         entry_id: this._selected,
         config: payload,
@@ -405,7 +433,7 @@ class TankwisePanel extends HTMLElement {
               </label>`
           )
           .join("")
-      : `<div class="entity-empty">Nenhuma entidade encontrada.</div>`;
+      : `<div class="entity-empty">${modal.domains && modal.domains[0] === "notify" ? "Nenhum serviço notify encontrado." : "Nenhuma entidade encontrada."}</div>`;
     return `
       <div class="modal-backdrop" data-modal-backdrop>
         <div class="modal" role="dialog" aria-modal="true">
@@ -414,7 +442,7 @@ class TankwisePanel extends HTMLElement {
             <button type="button" class="modal-x" data-modal-cancel title="Fechar">×</button>
           </div>
           <p class="hint" style="margin:0 0 10px">${this._esc(modal.hint)}</p>
-          <input type="search" class="modal-search" placeholder="Pesquisar entidade…" value="${this._esc(modal.query)}" autocomplete="off" data-modal-search>
+          <input type="search" class="modal-search" placeholder="${modal.domains && modal.domains[0] === "notify" ? "Pesquisar serviço notify…" : "Pesquisar entidade…"}" value="${this._esc(modal.query)}" autocomplete="off" data-modal-search>
           <div class="entity-list modal-list">${rows}</div>
           <div class="modal-actions">
             <button type="button" class="secondary" data-modal-cancel>Cancelar</button>
@@ -795,6 +823,13 @@ class TankwisePanel extends HTMLElement {
             "Adicionar LEDs / feedback",
             "Pesquise e marque um ou mais dispositivos que mostram o status da bomba."
           );
+        } else if (key === "notify_services") {
+          this._openEntityModal(
+            "notify_services",
+            ["notify"],
+            "Adicionar serviços notify",
+            "Pesquise e marque um ou mais destinos (ex.: notify.mobile_app_seu_telefone)."
+          );
         }
       };
     });
@@ -1125,9 +1160,15 @@ class TankwisePanel extends HTMLElement {
             <h2>Notificações de nível</h2>
             <div class="desc">Avisos quando a caixa estiver baixa ou crítica.</div>
             <div class="grid">
-              <div>
-                <label>Serviço notify</label>
-                <input type="text" data-key="notify_service" value="${this._esc(this._val("notify_service", ""))}" placeholder="notify.mobile_app_seu_telefone">
+              <div style="grid-column: 1 / -1">
+                <label>Serviços notify</label>
+                ${this._entitySelectedList(
+                  "notify_services",
+                  ["notify"],
+                  "Nenhum serviço notify adicionado."
+                )}
+                <button type="button" class="secondary add-btn" data-open-entity-modal="notify_services">Adicionar notify</button>
+                <div class="hint">Pode adicionar vários destinos (celular, Telegram, etc.). Cada alerta é enviado a todos.</div>
               </div>
               <div>
                 <label>Nível baixo (%)</label>

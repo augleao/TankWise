@@ -10,7 +10,12 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "custom_components" / "tankwise"))
 
-from helpers import distance_to_percent, merge_entry_config  # noqa: E402
+from helpers import (  # noqa: E402
+    distance_to_percent,
+    merge_entry_config,
+    normalize_notify_services,
+    with_normalized_notify,
+)
 
 
 @pytest.mark.parametrize(
@@ -39,3 +44,28 @@ def test_merge_options_win():
     )
     assert merged["full_distance"] == 80.0
     assert merged["pump_entity"] == "switch.a"
+
+
+def test_normalize_notify_from_legacy_string():
+    assert normalize_notify_services({"notify_service": "notify.phone"}) == [
+        "notify.phone"
+    ]
+    assert normalize_notify_services({"notify_service": "  "}) == []
+    assert normalize_notify_services({}) == []
+
+
+def test_normalize_notify_from_list():
+    assert normalize_notify_services(
+        {"notify_services": ["notify.a", "", " notify.b "]}
+    ) == ["notify.a", "notify.b"]
+    assert normalize_notify_services({"notify_services": "notify.a, notify.b"}) == [
+        "notify.a",
+        "notify.b",
+    ]
+
+
+def test_with_normalized_notify_prefers_list():
+    cfg = with_normalized_notify(
+        {"notify_service": "notify.legacy", "notify_services": ["notify.new"]}
+    )
+    assert cfg["notify_services"] == ["notify.new"]

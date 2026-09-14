@@ -271,7 +271,7 @@
   }
 
   function selectedList(key, domains, emptyText) {
-    const el = $(key === "toggle_entities" ? "toggle_entities_list" : "led_entities_list");
+    const el = $(`${key}_list`);
     if (!el || !state.config) return;
     const selected = Array.isArray(state.config[key]) ? state.config[key] : [];
     const byId = new Map(entityItems(domains, selected).map((i) => [i.id, i]));
@@ -314,7 +314,7 @@
               `<label class="entity-opt"><input type="checkbox" value="${item.id}" ${item.selected ? "checked" : ""}><span>${item.name}</span></label>`
           )
           .join("")
-      : `<div class="entity-empty">Nenhuma entidade encontrada.</div>`;
+      : `<div class="entity-empty">${modal.domains && modal.domains[0] === "notify" ? "Nenhum serviço notify encontrado." : "Nenhuma entidade encontrada."}</div>`;
     list.querySelectorAll('input[type="checkbox"]').forEach((box) => {
       box.addEventListener("change", () => {
         const set = new Set(state.entityModal.draft || []);
@@ -354,8 +354,10 @@
     closeEntityModal();
     if (key === "toggle_entities") {
       selectedList("toggle_entities", domains, "Nenhum botão adicionado.");
-    } else {
+    } else if (key === "led_entities") {
       selectedList("led_entities", domains, "Nenhum LED/feedback adicionado.");
+    } else if (key === "notify_services") {
+      selectedList("notify_services", domains, "Nenhum serviço notify adicionado.");
     }
   }
 
@@ -366,6 +368,7 @@
     fillSelect($("distance_entity"), ["sensor", "input_number", "number"], c.distance_entity);
     selectedList("toggle_entities", ["binary_sensor", "input_boolean", "switch"], "Nenhum botão adicionado.");
     selectedList("led_entities", ["light", "switch", "input_boolean"], "Nenhum LED/feedback adicionado.");
+    selectedList("notify_services", ["notify"], "Nenhum serviço notify adicionado.");
 
     const scalars = [
       "full_distance",
@@ -379,7 +382,6 @@
       "work_minutes",
       "rest_minutes",
       "failsafe_margin_minutes",
-      "notify_service",
       "low_level_percent",
       "critical_level_percent",
       "level_notify_hold_seconds",
@@ -407,6 +409,10 @@
     payload.led_entities = Array.isArray(state.config.led_entities)
       ? state.config.led_entities
       : [];
+    payload.notify_services = Array.isArray(state.config.notify_services)
+      ? state.config.notify_services
+      : [];
+    delete payload.notify_service;
     payload.expose_percentage = get("expose_percentage").checked;
     payload.threshold_mode = get("threshold_mode")?.value || thresholdMode();
 
@@ -431,8 +437,6 @@
       if (!el) continue;
       payload[key] = el.value === "" ? null : Number(el.value);
     }
-    payload.notify_service = get("notify_service").value || "";
-
     if (!$("timed_mode").checked) {
       payload.work_minutes = 0;
       payload.rest_minutes = 0;
@@ -457,6 +461,11 @@
     const ver = $("version");
     if (ver) ver.textContent = state.version ? `v${state.version}` : "";
     state.config = { ...entry.config };
+    if (!Array.isArray(state.config.notify_services)) {
+      const legacy = state.config.notify_service;
+      state.config.notify_services =
+        typeof legacy === "string" && legacy.trim() ? [legacy.trim()] : [];
+    }
     state.status = entry.status;
     $("empty-state").hidden = true;
     $("app").hidden = false;
@@ -642,6 +651,17 @@
           ["light", "switch", "input_boolean"],
           "Adicionar LEDs / feedback",
           "Pesquise e marque um ou mais dispositivos que mostram o status da bomba."
+        )
+      );
+    }
+    const addNotify = $("btn-add-notify");
+    if (addNotify) {
+      addNotify.addEventListener("click", () =>
+        openEntityModal(
+          "notify_services",
+          ["notify"],
+          "Adicionar serviços notify",
+          "Pesquise e marque um ou mais destinos (ex.: notify.mobile_app_seu_telefone)."
         )
       );
     }

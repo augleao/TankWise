@@ -215,6 +215,23 @@ async def api_entities(request: web.Request) -> web.Response:
             buckets[domain].append({"id": eid, "name": f"{name} ({eid})"})
         for key in buckets:
             buckets[key].sort(key=lambda x: x["name"])
+        # Also list notify.* services for the alerts picker.
+        notify_map: dict[str, dict] = {}
+        st2, services = await _ha(session, "GET", "/api/services")
+        if st2 < 400 and isinstance(services, list):
+            for domain_block in services:
+                if domain_block.get("domain") != "notify":
+                    continue
+                for name in (domain_block.get("services") or {}):
+                    sid = f"notify.{name}"
+                    notify_map[sid] = {"id": sid, "name": sid}
+        for item in states:
+            eid = item.get("entity_id", "")
+            if not eid.startswith("notify."):
+                continue
+            label = item.get("attributes", {}).get("friendly_name") or eid
+            notify_map[eid] = {"id": eid, "name": f"{label} ({eid})"}
+        buckets["notify"] = sorted(notify_map.values(), key=lambda x: x["name"])
         return web.json_response({"entities": buckets})
     if status >= 400:
         return _json_error(

@@ -45,7 +45,8 @@
           "reconcile_interval": "Reconcile interval",
           "work_minutes": "Work minutes",
           "rest_minutes": "Rest minutes",
-          "notify_service": "Notify service"
+          "notify_service": "Notify service",
+          "notify_services": "Notify services"
         }
       }
     },

@@ -32,7 +32,8 @@ CONF_FAILSAFE_MARGIN_MINUTES: Final = "failsafe_margin_minutes"
 
 CONF_TOGGLE_ENTITIES: Final = "toggle_entities"
 CONF_LED_ENTITIES: Final = "led_entities"
-CONF_NOTIFY_SERVICE: Final = "notify_service"
+CONF_NOTIFY_SERVICE: Final = "notify_service"  # legacy single string
+CONF_NOTIFY_SERVICES: Final = "notify_services"
 CONF_LOW_LEVEL_PERCENT: Final = "low_level_percent"
 CONF_CRITICAL_LEVEL_PERCENT: Final = "critical_level_percent"
 CONF_LEVEL_NOTIFY_HOLD_SECONDS: Final = "level_notify_hold_seconds"
