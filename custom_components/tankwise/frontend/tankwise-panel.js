@@ -294,7 +294,7 @@ class TankwisePanel extends HTMLElement {
     this._render();
   }
 
-  async def _testNotify() {
+  async _testNotify() {
     if (!this._selected) return;
     this._busy = true;
     this._msg = "";
