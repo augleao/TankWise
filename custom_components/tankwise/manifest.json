@@ -1,7 +1,9 @@
 {
   "domain": "tankwise",
   "name": "Tankwise",
-  "after_dependencies": [],
+  "after_dependencies": [
+    "recorder"
+  ],
   "codeowners": [
     "@augleao"
   ],
