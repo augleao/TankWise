@@ -876,6 +876,42 @@
     setBusy(false);
   }
 
+  function formatLogTs(raw) {
+    const text = String(raw || "");
+    const d = new Date(text);
+    if (!Number.isNaN(d.getTime())) {
+      const pad = (n) => String(n).padStart(2, "0");
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+    }
+    return text.replace("T", " ").replace(/\.\d+/, "").replace("Z", "").replace(/\+00:00$/, "");
+  }
+
+  function formatLogValue(key, value) {
+    if (value === null || value === undefined || value === "") return "—";
+    if (typeof value === "boolean") return value ? "ON" : "OFF";
+    if (key === "percent" && Number.isFinite(Number(value))) {
+      return `${Number(value).toFixed(0)}%`;
+    }
+    if (key === "distance" && Number.isFinite(Number(value))) {
+      return Number(value).toFixed(3);
+    }
+    return String(value);
+  }
+
+  function logRowHtml(row) {
+    const ts = formatLogTs(row.ts);
+    const ev = row.event || "";
+    const preferred = ["percent", "distance", "reason", "desired_on", "enabled", "target_on", "service"];
+    const keys = [
+      ...preferred.filter((k) => k in row),
+      ...Object.keys(row).filter((k) => !["ts", "event", ...preferred].includes(k)),
+    ];
+    const extra = keys.length
+      ? keys.map((k) => `${k}=${formatLogValue(k, row[k])}`).join(" · ")
+      : "—";
+    return `<div class="log-row"><div class="log-head"><span class="log-ts">${ts}</span><span class="log-ev">${ev}</span></div><div class="log-extra">${extra}</div></div>`;
+  }
+
   async function loadLogs() {
     if (!state.selected) return;
     try {
@@ -884,21 +920,7 @@
       if (!box) return;
       const rows = res.logs || [];
       box.innerHTML = rows.length
-        ? rows
-            .map((row) => {
-              const ts = String(row.ts || "").replace("T", " ").replace("Z", "");
-              const ev = row.event || "";
-              const preferred = ["percent", "distance", "reason", "desired_on", "enabled"];
-              const keys = [
-                ...preferred.filter((k) => k in row),
-                ...Object.keys(row).filter(
-                  (k) => !["ts", "event", ...preferred].includes(k)
-                ),
-              ];
-              const extra = keys.map((k) => `${k}=${row[k]}`).join(" · ");
-              return `<div class="log-row"><span class="log-ts">${ts}</span><span class="log-ev">${ev}</span><span>${extra}</span></div>`;
-            })
-            .join("")
+        ? rows.map((row) => logRowHtml(row)).join("")
         : `<div class="hint">${t("no_events")}</div>`;
     } catch (err) {
       showAlert(err.message || String(err), "err");
