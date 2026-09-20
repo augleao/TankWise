@@ -171,6 +171,42 @@ class TankwisePanel extends HTMLElement {
     }
   }
 
+  _formatLogTs(raw) {
+    const text = String(raw || "");
+    const d = new Date(text);
+    if (!Number.isNaN(d.getTime())) {
+      const pad = (n) => String(n).padStart(2, "0");
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+    }
+    return text.replace("T", " ").replace(/\.\d+/, "").replace("Z", "").replace(/\+00:00$/, "");
+  }
+
+  _formatLogValue(key, value) {
+    if (value === null || value === undefined || value === "") return "—";
+    if (typeof value === "boolean") return value ? "ON" : "OFF";
+    if (key === "percent" && Number.isFinite(Number(value))) {
+      return `${Number(value).toFixed(0)}%`;
+    }
+    if (key === "distance" && Number.isFinite(Number(value))) {
+      return Number(value).toFixed(3);
+    }
+    return String(value);
+  }
+
+  _logRowHtml(row) {
+    const ts = this._formatLogTs(row.ts);
+    const ev = row.event || "";
+    const preferred = ["percent", "distance", "reason", "desired_on", "enabled", "target_on", "service"];
+    const keys = [
+      ...preferred.filter((k) => k in row),
+      ...Object.keys(row).filter((k) => !["ts", "event", ...preferred].includes(k)),
+    ];
+    const extra = keys.length
+      ? keys.map((k) => `${k}=${this._formatLogValue(k, row[k])}`).join(" · ")
+      : "—";
+    return `<div class="log-row"><div class="log-head"><span class="log-ts">${this._esc(ts)}</span><span class="log-ev">${this._esc(ev)}</span></div><div class="log-extra">${this._esc(extra)}</div></div>`;
+  }
+
   async _loadConfig(entryId) {
     const res = await this._ws("tankwise/get_config", { entry_id: entryId });
     this._config = { ...res.config };
@@ -942,11 +978,15 @@ class TankwisePanel extends HTMLElement {
         .mode-row { display: flex; gap: 8px; flex-wrap: wrap; margin: 6px 0 4px; }
         .ver { font-size: 0.95rem; font-weight: 600; color: var(--tw-muted); margin-left: 6px; }
         .log-box { max-height: 420px; overflow: auto; border: 1px solid var(--tw-border); border-radius: 12px; background: #f7faf8; }
-        .log-row { display: grid; grid-template-columns: 160px 160px 1fr; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--tw-border); font-size: 0.82rem; }
+        .log-row {
+          display: flex; flex-direction: column; gap: 4px;
+          padding: 10px 12px; border-bottom: 1px solid var(--tw-border); font-size: 0.82rem;
+        }
         .log-row:last-child { border-bottom: none; }
-        .log-ts { color: var(--tw-muted); font-family: ui-monospace, monospace; }
+        .log-head { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: baseline; }
+        .log-ts { color: var(--tw-muted); font-family: ui-monospace, monospace; font-size: 0.78rem; }
         .log-ev { font-weight: 700; color: var(--tw-green-dark); }
-        .log-extra { color: #31463c; word-break: break-word; }
+        .log-extra { color: #31463c; word-break: break-word; line-height: 1.35; }
         .hero p { margin: 4px 0 0; color: var(--tw-muted); font-size: 0.95rem; }
         .badge {
           display: inline-flex; align-items: center; gap: 6px;
@@ -1614,21 +1654,7 @@ class TankwisePanel extends HTMLElement {
             <div class="log-box">
               ${
                 (this._logs || []).length
-                  ? this._logs
-                      .map((row) => {
-                        const ts = String(row.ts || "").replace("T", " ").replace("Z", "");
-                        const ev = row.event || "";
-                        const preferred = ["percent", "distance", "reason", "desired_on", "enabled"];
-                        const keys = [
-                          ...preferred.filter((k) => k in row),
-                          ...Object.keys(row).filter(
-                            (k) => !["ts", "event", ...preferred].includes(k)
-                          ),
-                        ];
-                        const extra = keys.map((k) => `${k}=${row[k]}`).join(" · ");
-                        return `<div class="log-row"><span class="log-ts">${this._esc(ts)}</span><span class="log-ev">${this._esc(ev)}</span><span class="log-extra">${this._esc(extra)}</span></div>`;
-                      })
-                      .join("")
+                  ? this._logs.map((row) => this._logRowHtml(row)).join("")
                   : `<div class="hint" style="padding:14px">${this._t("no_events")}</div>`
               }
             </div>

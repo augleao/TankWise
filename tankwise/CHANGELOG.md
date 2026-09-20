@@ -1,3 +1,7 @@
+## 1.1.1
+
+- Logs legíveis no celular (detalhes em linha própria)
+
 # Changelog — TankWise Add-on
 
 ## 1.1.0

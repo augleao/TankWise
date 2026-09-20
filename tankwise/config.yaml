@@ -1,5 +1,5 @@
 name: "TankWise"
-version: "1.1.0"
+version: "1.1.1"
 slug: tankwise
 description: "Painel web do TankWise — nível do tanque, demanda da bomba e configuração"
 url: "https://github.com/augleao/TankWise"
