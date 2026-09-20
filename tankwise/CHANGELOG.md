@@ -1,3 +1,18 @@
+# Changelog — TankWise Add-on
+
+## 1.1.0
+
+- i18n EN/PT conforme o idioma do Home Assistant
+- Histórico gráfico de nível e bomba (1h / 1d / 1 semana / 1 mês)
+- Toggle único de automação e de demanda da bomba
+- Reconciliação automática: intervalo em minutos + habilitar/desabilitar
+- Botão Testar alertas
+- Proxy `/api/language` para ler o idioma do HA
+
+## 1.0.3
+
+- Notificações multi-seleção (mesmo fluxo dos botões/LEDs)
+
 ## 1.0.2
 
 - Seletor de limiares em distância ou %
@@ -8,8 +23,6 @@
 - Proxy de logs da integração
 - Exibe versão no título
 - Aba Logs
-
-# Changelog — TankWise Add-on
 
 ## 1.0.0
 

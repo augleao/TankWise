@@ -1,4 +1,5 @@
 (() => {
+  const I18n = globalThis.TankwiseI18n;
   const state = {
     entries: [],
     selected: null,
@@ -9,9 +10,20 @@
     tab: "monitor",
     pollTimer: null,
     entityModal: null,
+    historyModal: null, // { range, points, loading, message }
+    lang: "en",
   };
 
   const $ = (id) => document.getElementById(id);
+
+  function t(key, vars) {
+    return I18n.t(state.lang, key, vars);
+  }
+
+  function applyLanguage() {
+    document.documentElement.lang = state.lang === "pt" ? "pt-BR" : "en";
+    I18n.applyDom(state.lang);
+  }
 
   function showAlert(message, kind = "ok") {
     const el = $("alert");
@@ -49,8 +61,14 @@
     const mode = thresholdMode();
     const onL = $("label_on_threshold");
     const offL = $("label_off_threshold");
-    if (onL) onL.textContent = mode === "percent" ? "Ligar abaixo de (%)" : "Limiar ligar (distância ≥)";
-    if (offL) offL.textContent = mode === "percent" ? "Desligar acima de (%)" : "Limiar desligar (distância ≤)";
+    if (onL) {
+      onL.textContent =
+        mode === "percent" ? t("on_below_short") : t("on_threshold_distance");
+    }
+    if (offL) {
+      offL.textContent =
+        mode === "percent" ? t("off_above_short") : t("off_threshold_distance");
+    }
     const on = $("on_threshold");
     const off = $("off_threshold");
     if (on) {
@@ -112,7 +130,7 @@
     }
     if (!res.ok) {
       const msg =
-        (data && (data.message || data.error)) || `Erro HTTP ${res.status}`;
+        (data && (data.message || data.error)) || t("http_error", { status: res.status });
       throw new Error(msg);
     }
     return data;
@@ -143,7 +161,8 @@
     const label = pct === null ? "—" : `${level.toFixed(0)}%`;
     const fill = level < 25 ? "#e53935" : level < 50 ? "#fb8c00" : "#1b7f5a";
     return `
-      <svg viewBox="0 0 120 140" width="140" height="164" aria-label="Nível ${label}">
+      <button type="button" class="tank-hit" id="btn-open-history" title="${t("tank_aria")}" aria-label="${t("tank_aria")}">
+      <svg viewBox="0 0 120 140" width="140" height="164" aria-hidden="true">
         <defs>
           <clipPath id="tankClip"><rect x="18" y="18" width="84" height="100" rx="6"/></clipPath>
           <linearGradient id="waterGrad" x1="0" y1="0" x2="0" y2="1">
@@ -159,8 +178,247 @@
         </g>
         <rect x="14" y="14" width="92" height="108" rx="10" fill="none" stroke="#2f5d4a" stroke-width="3"/>
         <text x="60" y="72" text-anchor="middle" font-size="22" font-weight="700" fill="#16382c">${label}</text>
-        <text x="60" y="132" text-anchor="middle" font-size="11" fill="#5b6b63">CAIXA D'ÁGUA</text>
+        <text x="60" y="132" text-anchor="middle" font-size="11" fill="#5b6b63">${t("tank_label")}</text>
+      </svg>
+      <span class="tank-hint">${t("tank_hint")}</span>
+      </button>`;
+  }
+
+  function formatHistoryTick(ts, range) {
+    const d = new Date(ts);
+    if (Number.isNaN(d.getTime())) return "";
+    if (range === "1h" || range === "1d") {
+      return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    }
+    return d.toLocaleDateString([], { day: "2-digit", month: "2-digit" });
+  }
+
+  function historyTimeWindow(levelPoints, pumpPoints) {
+    const times = []
+      .concat(levelPoints || [], pumpPoints || [])
+      .map((p) => Date.parse(p.ts))
+      .filter((t) => Number.isFinite(t));
+    if (!times.length) return null;
+    const t0 = Math.min(...times);
+    const t1 = Math.max(...times);
+    return { t0, t1: t1 === t0 ? t0 + 1 : t1 };
+  }
+
+  function levelChartSvg(points, pumpPoints, range) {
+    const W = 680;
+    const H = 380;
+    const pad = { t: 28, r: 18, b: 36, l: 52 };
+    const gap = 18;
+    const levelH = 220;
+    const pumpH = 70;
+    const iw = W - pad.l - pad.r;
+    const levelTop = pad.t;
+    const pumpTop = pad.t + levelH + gap;
+    const window = historyTimeWindow(points, pumpPoints);
+
+    if (!window) {
+      return `
+        <svg class="level-chart" viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${t("chart_no_data")}">
+          <rect x="0" y="0" width="${W}" height="${H}" rx="12" fill="#f7faf8"/>
+          <text x="${W / 2}" y="${H / 2}" text-anchor="middle" fill="#5b6b63" font-size="14">${t("chart_no_data")}</text>
+        </svg>`;
+    }
+
+    const { t0, t1 } = window;
+    const xAt = (ts) => pad.l + ((Date.parse(ts) - t0) / (t1 - t0)) * iw;
+    const levelPts = points || [];
+    const pumpPts = pumpPoints || [];
+
+    let levelPath = "";
+    let levelArea = "";
+    let levelDot = "";
+    let levelLabel = "";
+    if (levelPts.length) {
+      const xy = levelPts.map((p) => {
+        const x = xAt(p.ts);
+        const y =
+          levelTop +
+          (1 - Math.max(0, Math.min(100, Number(p.percent) || 0)) / 100) * levelH;
+        return [x, y];
+      });
+      levelPath = xy
+        .map((c, i) => `${i ? "L" : "M"}${c[0].toFixed(1)} ${c[1].toFixed(1)}`)
+        .join(" ");
+      levelArea = `${levelPath} L${xy[xy.length - 1][0].toFixed(1)} ${(levelTop + levelH).toFixed(
+        1
+      )} L${xy[0][0].toFixed(1)} ${(levelTop + levelH).toFixed(1)} Z`;
+      const last = levelPts[levelPts.length - 1];
+      levelDot = `<circle cx="${xy[xy.length - 1][0].toFixed(1)}" cy="${xy[
+        xy.length - 1
+      ][1].toFixed(1)}" r="4.5" fill="#145c42"/>`;
+      levelLabel = `<text x="${pad.l + iw}" y="${levelTop + 14}" text-anchor="end" font-size="12" font-weight="700" fill="#145c42">${Number(
+        last.percent
+      ).toFixed(0)}%</text>`;
+    }
+
+    const grid = [0, 25, 50, 75, 100]
+      .map((pct) => {
+        const y = levelTop + (1 - pct / 100) * levelH;
+        return `
+          <line x1="${pad.l}" y1="${y}" x2="${pad.l + iw}" y2="${y}" stroke="#d7e0db" stroke-width="1" ${
+            pct === 0 || pct === 100 ? "" : 'stroke-dasharray="4 4"'
+          }/>
+          <text x="${pad.l - 8}" y="${y + 4}" text-anchor="end" font-size="11" fill="#5b6b63">${pct}%</text>`;
+      })
+      .join("");
+
+    let pumpPath = "";
+    let pumpBands = "";
+    let pumpLabel = "";
+    if (pumpPts.length) {
+      const yOn = pumpTop + 14;
+      const yOff = pumpTop + pumpH - 14;
+      const segments = pumpPts.map((p) => [xAt(p.ts), p.on ? yOn : yOff, Boolean(p.on)]);
+      const cmds = [];
+      for (let i = 0; i < segments.length; i++) {
+        const [x, y] = segments[i];
+        if (i === 0) cmds.push(`M${x.toFixed(1)} ${y.toFixed(1)}`);
+        else {
+          const prevY = segments[i - 1][1];
+          cmds.push(`L${x.toFixed(1)} ${prevY.toFixed(1)}`);
+          cmds.push(`L${x.toFixed(1)} ${y.toFixed(1)}`);
+        }
+      }
+      pumpPath = cmds.join(" ");
+      const bands = [];
+      for (let i = 0; i < pumpPts.length; i++) {
+        if (!pumpPts[i].on) continue;
+        const x1 = xAt(pumpPts[i].ts);
+        const x2 = i + 1 < pumpPts.length ? xAt(pumpPts[i + 1].ts) : pad.l + iw;
+        bands.push(
+          `<rect x="${Math.min(x1, x2).toFixed(1)}" y="${pumpTop}" width="${Math.max(
+            0,
+            Math.abs(x2 - x1)
+          ).toFixed(1)}" height="${pumpH}" fill="#fb8c00" opacity="0.16"/>`
+        );
+      }
+      pumpBands = bands.join("");
+      const lastPump = pumpPts[pumpPts.length - 1];
+      pumpLabel = `<text x="${pad.l + iw}" y="${pumpTop + 14}" text-anchor="end" font-size="12" font-weight="700" fill="#ef6c00">${
+        lastPump.on ? "ON" : "OFF"
+      }</text>`;
+    }
+
+    const tickSources = levelPts.length ? levelPts : pumpPts;
+    const tickIdx = [0, Math.floor((tickSources.length - 1) / 2), tickSources.length - 1].filter(
+      (v, i, arr) => arr.indexOf(v) === i && tickSources[v]
+    );
+    const ticks = tickIdx
+      .map((i) => {
+        const x = xAt(tickSources[i].ts);
+        return `<text x="${x}" y="${H - 12}" text-anchor="middle" font-size="11" fill="#5b6b63">${formatHistoryTick(
+          tickSources[i].ts,
+          range
+        )}</text>`;
+      })
+      .join("");
+
+    return `
+      <svg class="level-chart" viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${t("history_title")}">
+        <defs>
+          <linearGradient id="levelFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#1b7f5a" stop-opacity="0.35"/>
+            <stop offset="100%" stop-color="#1b7f5a" stop-opacity="0.02"/>
+          </linearGradient>
+        </defs>
+        <rect x="0" y="0" width="${W}" height="${H}" rx="12" fill="#f7faf8"/>
+        <text x="${pad.l}" y="${levelTop - 8}" font-size="12" font-weight="700" fill="#145c42">${t("level")}</text>
+        <g transform="translate(${pad.l + 54}, ${levelTop - 18})">
+          <line x1="0" y1="8" x2="18" y2="8" stroke="#1b7f5a" stroke-width="2.5"/>
+          <text x="24" y="12" font-size="11" fill="#5b6b63">${t("chart_tank")}</text>
+          <line x1="120" y1="8" x2="138" y2="8" stroke="#ef6c00" stroke-width="2.5"/>
+          <text x="144" y="12" font-size="11" fill="#5b6b63">${t("chart_pump")}</text>
+        </g>
+        ${grid}
+        ${
+          levelPts.length
+            ? `<path d="${levelArea}" fill="url(#levelFill)"/><path d="${levelPath}" fill="none" stroke="#1b7f5a" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>${levelDot}${levelLabel}`
+            : `<text x="${pad.l + iw / 2}" y="${levelTop + levelH / 2}" text-anchor="middle" fill="#5b6b63" font-size="13">${t("chart_no_level")}</text>`
+        }
+        <text x="${pad.l}" y="${pumpTop - 8}" font-size="12" font-weight="700" fill="#ef6c00">${t("chart_pump_label")}</text>
+        <rect x="${pad.l}" y="${pumpTop}" width="${iw}" height="${pumpH}" rx="8" fill="#fff" stroke="#d7e0db"/>
+        <text x="${pad.l - 8}" y="${pumpTop + 18}" text-anchor="end" font-size="10" fill="#5b6b63">ON</text>
+        <text x="${pad.l - 8}" y="${pumpTop + pumpH - 8}" text-anchor="end" font-size="10" fill="#5b6b63">OFF</text>
+        ${pumpBands}
+        ${
+          pumpPts.length
+            ? `<path d="${pumpPath}" fill="none" stroke="#ef6c00" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>${pumpLabel}`
+            : `<text x="${pad.l + iw / 2}" y="${pumpTop + pumpH / 2 + 4}" text-anchor="middle" fill="#5b6b63" font-size="13">${t("chart_no_pump")}</text>`
+        }
+        ${ticks}
       </svg>`;
+  }
+
+  function renderHistoryModal() {
+    const modal = $("history-modal");
+    const body = $("history-body");
+    if (!modal || !body) return;
+    const hm = state.historyModal;
+    if (!hm) {
+      modal.classList.add("hidden");
+      return;
+    }
+    modal.classList.remove("hidden");
+    document.querySelectorAll("[data-history-range]").forEach((el) => {
+      el.classList.toggle("active", el.getAttribute("data-history-range") === hm.range);
+    });
+    if (hm.loading) {
+      body.innerHTML = `<div class="hint" style="padding:28px 8px;text-align:center">${t("loading_history")}</div>`;
+      return;
+    }
+    body.innerHTML = `${
+      hm.message ? `<div class="hint" style="margin-bottom:10px">${hm.message}</div>` : ""
+    }${levelChartSvg(hm.points || [], hm.pump_points || [], hm.range)}`;
+  }
+
+  async function openHistoryModal(range = "1d") {
+    if (!state.selected) return;
+    state.historyModal = {
+      range,
+      points: [],
+      pump_points: [],
+      loading: true,
+      message: null,
+    };
+    renderHistoryModal();
+    await loadHistory(range);
+  }
+
+  async function loadHistory(range) {
+    if (!state.selected || !state.historyModal) return;
+    state.historyModal = { ...state.historyModal, range, loading: true, message: null };
+    renderHistoryModal();
+    try {
+      const res = await api(`/entries/${state.selected}/level_history?range=${encodeURIComponent(range)}`);
+      if (!state.historyModal) return;
+      state.historyModal = {
+        range: res.range || range,
+        points: res.points || [],
+        pump_points: res.pump_points || [],
+        loading: false,
+        message: res.message || null,
+      };
+    } catch (err) {
+      if (!state.historyModal) return;
+      state.historyModal = {
+        ...state.historyModal,
+        loading: false,
+        points: [],
+        pump_points: [],
+        message: err.message || String(err),
+      };
+    }
+    renderHistoryModal();
+  }
+
+  function closeHistoryModal() {
+    state.historyModal = null;
+    renderHistoryModal();
   }
 
   function pumpSvg(running) {
@@ -169,7 +427,8 @@
       ? `<animateTransform attributeName="transform" type="rotate" from="0 60 52" to="360 60 52" dur="1.2s" repeatCount="indefinite"/>`
       : "";
     return `
-      <svg viewBox="0 0 120 120" width="120" height="120" aria-label="Bomba ${running ? "ligada" : "parada"}">
+      <button type="button" class="tank-hit" id="btn-open-history-pump" title="${t("tank_aria")}" aria-label="${t("tank_aria")}">
+      <svg viewBox="0 0 120 120" width="120" height="120" aria-hidden="true">
         <circle cx="60" cy="52" r="28" fill="#eef2f0" stroke="${color}" stroke-width="3"/>
         <g>
           <path d="M60 30 L66 52 L60 74 L54 52 Z" fill="${color}"/>
@@ -177,8 +436,10 @@
           ${spin}
         </g>
         <rect x="48" y="80" width="24" height="18" rx="3" fill="${color}"/>
-        <text x="60" y="112" text-anchor="middle" font-size="11" fill="#5b6b63">${running ? "BOMBA ON" : "BOMBA OFF"}</text>
-      </svg>`;
+        <text x="60" y="112" text-anchor="middle" font-size="11" fill="#5b6b63">${running ? t("pump_on") : t("pump_off")}</text>
+      </svg>
+      <span class="tank-hint">${t("tank_hint")}</span>
+      </button>`;
   }
 
   function fmt(v, suffix = "") {
@@ -193,16 +454,24 @@
     const pct = percent();
     $("tank-visual").innerHTML = tankSvg(pct);
     $("pump-visual").innerHTML = pumpSvg(Boolean(st.pump_on));
+    const openHistory = $("btn-open-history");
+    if (openHistory) {
+      openHistory.onclick = () => openHistoryModal(state.historyModal?.range || "1d");
+    }
+    const openHistoryPump = $("btn-open-history-pump");
+    if (openHistoryPump) {
+      openHistoryPump.onclick = () => openHistoryModal(state.historyModal?.range || "1d");
+    }
 
     const rows = [
-      ["Automação", st.enabled ? "ligada" : "desligada", st.enabled ? "on" : "off"],
-      ["Demanda", st.desired_on ? "ON" : "OFF", st.desired_on ? "on" : "off"],
-      ["Bomba", st.pump_on == null ? "—" : st.pump_on ? "ON" : "OFF", st.pump_on ? "on" : "off"],
-      ["Distância", fmt(st.distance), ""],
-      ["Nível", pct == null ? "—" : `${pct.toFixed(0)}%`, ""],
-      ["Fase", fmt(st.cycle_phase), ""],
-      ["Permitido", st.pump_allowed ? "sim" : "não", ""],
-      ["Motivo", fmt(st.reason), ""],
+      [t("status_automation"), st.enabled ? t("status_on") : t("status_off"), st.enabled ? "on" : "off"],
+      [t("demand"), st.desired_on ? "ON" : "OFF", st.desired_on ? "on" : "off"],
+      [t("physical_pump_short"), st.pump_on == null ? "—" : st.pump_on ? "ON" : "OFF", st.pump_on ? "on" : "off"],
+      [t("distance"), fmt(st.distance), ""],
+      [t("level"), pct == null ? "—" : `${pct.toFixed(0)}%`, ""],
+      [t("phase"), fmt(st.cycle_phase), ""],
+      [t("status_allowed"), st.pump_allowed ? t("status_yes") : t("status_no"), ""],
+      [t("status_reason"), fmt(st.reason), ""],
     ];
     $("stats").innerHTML = rows
       .map(
@@ -212,15 +481,42 @@
       .join("");
 
     const badge = $("badge");
+    const toggleEnabled = $("btn-toggle-enabled");
     if (!st.enabled) {
       badge.className = "badge off";
-      badge.textContent = "automação OFF";
+      badge.textContent = t("automation_badge_off");
+      if (toggleEnabled) {
+        toggleEnabled.textContent = t("enable_automation");
+        toggleEnabled.className = "";
+      }
     } else if (st.desired_on) {
       badge.className = "badge ok";
-      badge.textContent = "demanda ON";
+      badge.textContent = t("demand_badge_on");
+      if (toggleEnabled) {
+        toggleEnabled.textContent = t("disable_automation");
+        toggleEnabled.className = "danger";
+      }
     } else {
       badge.className = "badge";
-      badge.textContent = "demanda OFF";
+      badge.textContent = t("demand_badge_off");
+      if (toggleEnabled) {
+        toggleEnabled.textContent = t("disable_automation");
+        toggleEnabled.className = "danger";
+      }
+    }
+    if (toggleEnabled) {
+      toggleEnabled.disabled = Boolean(state.busy) || !state.selected;
+    }
+    const toggleDemand = $("btn-toggle-demand");
+    if (toggleDemand) {
+      if (st.desired_on) {
+        toggleDemand.textContent = t("turn_pump_off");
+        toggleDemand.className = "danger";
+      } else {
+        toggleDemand.textContent = t("turn_pump_on");
+        toggleDemand.className = "";
+      }
+      toggleDemand.disabled = Boolean(state.busy) || !state.selected;
     }
   }
 
@@ -244,14 +540,14 @@
           : []
     );
     const opts = [];
-    if (!multiple) opts.push(`<option value="">— selecione —</option>`);
+    if (!multiple) opts.push(`<option value="">${t("select_option")}</option>`);
     for (const item of list) {
       const sel = selectedSet.has(item.id) ? " selected" : "";
       opts.push(`<option value="${item.id}"${sel}>${item.name}</option>`);
     }
     for (const sid of selectedSet) {
       if (sid && !list.some((x) => x.id === sid)) {
-        opts.push(`<option value="${sid}" selected>${sid} (atual)</option>`);
+        opts.push(`<option value="${sid}" selected>${sid} ${t("current_entity")}</option>`);
       }
     }
     el.innerHTML = opts.join("");
@@ -264,7 +560,7 @@
     const items = list.map((item) => ({ ...item, selected: selectedSet.has(item.id) }));
     for (const sid of selectedSet) {
       if (sid && !list.some((x) => x.id === sid)) {
-        items.unshift({ id: sid, name: `${sid} (atual)`, selected: true });
+        items.unshift({ id: sid, name: `${sid} ${t("current_entity")}`, selected: true });
       }
     }
     return items;
@@ -279,7 +575,7 @@
       ? selected
           .map((id) => {
             const item = byId.get(id) || { id, name: id };
-            return `<div class="entity-row"><span class="entity-row-name" title="${item.id}">${item.name}</span><button type="button" class="entity-remove" data-key="${key}" data-id="${id}" title="Remover">×</button></div>`;
+            return `<div class="entity-row"><span class="entity-row-name" title="${item.id}">${item.name}</span><button type="button" class="entity-remove" data-key="${key}" data-id="${id}" title="${t("remove")}">×</button></div>`;
           })
           .join("")
       : `<div class="chips-empty">${emptyText}</div>`;
@@ -314,7 +610,7 @@
               `<label class="entity-opt"><input type="checkbox" value="${item.id}" ${item.selected ? "checked" : ""}><span>${item.name}</span></label>`
           )
           .join("")
-      : `<div class="entity-empty">${modal.domains && modal.domains[0] === "notify" ? "Nenhum serviço notify encontrado." : "Nenhuma entidade encontrada."}</div>`;
+      : `<div class="entity-empty">${modal.domains && modal.domains[0] === "notify" ? t("none_found_notify") : t("none_found_entity")}</div>`;
     list.querySelectorAll('input[type="checkbox"]').forEach((box) => {
       box.addEventListener("change", () => {
         const set = new Set(state.entityModal.draft || []);
@@ -337,6 +633,10 @@
     $("entity-modal-title").textContent = title;
     $("entity-modal-hint").textContent = hint;
     $("entity-modal-search").value = "";
+    $("entity-modal-search").setAttribute(
+      "placeholder",
+      domains && domains[0] === "notify" ? t("search_notify") : t("search_entity")
+    );
     $("entity-modal").classList.remove("hidden");
     renderModalList();
     $("entity-modal-search").focus();
@@ -353,11 +653,11 @@
     state.config[key] = [...draft];
     closeEntityModal();
     if (key === "toggle_entities") {
-      selectedList("toggle_entities", domains, "Nenhum botão adicionado.");
+      selectedList("toggle_entities", domains, t("no_buttons"));
     } else if (key === "led_entities") {
-      selectedList("led_entities", domains, "Nenhum LED/feedback adicionado.");
+      selectedList("led_entities", domains, t("no_leds"));
     } else if (key === "notify_services") {
-      selectedList("notify_services", domains, "Nenhum serviço notify adicionado.");
+      selectedList("notify_services", domains, t("no_notify"));
     }
   }
 
@@ -366,9 +666,9 @@
     const c = state.config;
     fillSelect($("pump_entity"), ["switch", "input_boolean"], c.pump_entity);
     fillSelect($("distance_entity"), ["sensor", "input_number", "number"], c.distance_entity);
-    selectedList("toggle_entities", ["binary_sensor", "input_boolean", "switch"], "Nenhum botão adicionado.");
-    selectedList("led_entities", ["light", "switch", "input_boolean"], "Nenhum LED/feedback adicionado.");
-    selectedList("notify_services", ["notify"], "Nenhum serviço notify adicionado.");
+    selectedList("toggle_entities", ["binary_sensor", "input_boolean", "switch"], t("no_buttons"));
+    selectedList("led_entities", ["light", "switch", "input_boolean"], t("no_leds"));
+    selectedList("notify_services", ["notify"], t("no_notify"));
 
     const scalars = [
       "full_distance",
@@ -377,7 +677,6 @@
       "off_threshold",
       "on_hold_seconds",
       "off_hold_seconds",
-      "reconcile_interval",
       "reconcile_retries",
       "work_minutes",
       "rest_minutes",
@@ -392,9 +691,26 @@
       const v = c[key];
       el.value = v == null ? "" : v;
     }
+    const minutesEl = $("reconcile_interval_minutes");
+    if (minutesEl) {
+      const seconds = Number(c.reconcile_interval ?? 120);
+      minutesEl.value = String(Math.max(1, Math.round(seconds / 60)));
+    }
     $("expose_percentage").checked = Boolean(c.expose_percentage);
     const timed = Number(c.work_minutes) > 0 || Number(c.rest_minutes) > 0;
     $("timed_mode").checked = timed;
+    updateReconcileToggle();
+  }
+
+  function updateReconcileToggle() {
+    const btn = $("btn-toggle-reconcile");
+    if (!btn) return;
+    const enabled = state.config?.reconcile_enabled !== false;
+    btn.textContent = enabled
+      ? t("disable_reconcile")
+      : t("enable_reconcile");
+    btn.className = enabled ? "danger" : "";
+    btn.disabled = Boolean(state.busy) || !state.selected;
   }
 
   function readConfigFromForm() {
@@ -423,7 +739,6 @@
       "off_threshold",
       "on_hold_seconds",
       "off_hold_seconds",
-      "reconcile_interval",
       "reconcile_retries",
       "work_minutes",
       "rest_minutes",
@@ -436,6 +751,10 @@
       const el = get(key);
       if (!el) continue;
       payload[key] = el.value === "" ? null : Number(el.value);
+    }
+    const minutesEl = get("reconcile_interval_minutes");
+    if (minutesEl && minutesEl.value !== "") {
+      payload.reconcile_interval = Math.max(1, Math.round(Number(minutesEl.value))) * 60;
     }
     if (!$("timed_mode").checked) {
       payload.work_minutes = 0;
@@ -490,7 +809,7 @@
         $("empty-state").hidden = false;
         $("app").hidden = true;
         $("badge").className = "badge";
-        $("badge").textContent = "sem integração";
+        $("badge").textContent = t("no_integration");
         return;
       }
       let entry = state.entries.find((e) => e.entry_id === state.selected) || state.entries[0];
@@ -499,7 +818,7 @@
     } catch (err) {
       showAlert(err.message || String(err), "err");
       $("badge").className = "badge off";
-      $("badge").textContent = "erro";
+      $("badge").textContent = t("error_badge");
     }
   }
 
@@ -518,7 +837,7 @@
         body: JSON.stringify({ config: cleaned }),
       });
       applyEntry(res);
-      showAlert("Configuração salva. O controlador já usa os novos parâmetros.", "ok");
+      showAlert(t("msg_saved"), "ok");
     } catch (err) {
       showAlert(err.message || String(err), "err");
     }
@@ -534,7 +853,7 @@
         body: JSON.stringify({ enabled }),
       });
       applyEntry(res);
-      showAlert(enabled ? "Automação ligada." : "Automação desligada (bomba forçada OFF).", "ok");
+      showAlert(enabled ? t("msg_automation_on") : t("msg_automation_off"), "ok");
     } catch (err) {
       showAlert(err.message || String(err), "err");
     }
@@ -550,10 +869,7 @@
         body: JSON.stringify({ desired_on: desiredOn }),
       });
       applyEntry(res);
-      showAlert(
-        desiredOn ? "Demanda manual ON (variável = 1)." : "Demanda manual OFF (variável = 0).",
-        "ok"
-      );
+      showAlert(desiredOn ? t("msg_demand_on") : t("msg_demand_off"), "ok");
     } catch (err) {
       showAlert(err.message || String(err), "err");
     }
@@ -563,7 +879,7 @@
   async function loadLogs() {
     if (!state.selected) return;
     try {
-      const res = await api(`/entries/${state.selected}/logs?limit=50`);
+      const res = await api(`/entries/${state.selected}/logs?limit=200`);
       const box = $("logs");
       if (!box) return;
       const rows = res.logs || [];
@@ -572,29 +888,66 @@
             .map((row) => {
               const ts = String(row.ts || "").replace("T", " ").replace("Z", "");
               const ev = row.event || "";
-              const extra = Object.entries(row)
-                .filter(([k]) => !["ts", "event"].includes(k))
-                .map(([k, v]) => `${k}=${v}`)
-                .join(" · ");
+              const preferred = ["percent", "distance", "reason", "desired_on", "enabled"];
+              const keys = [
+                ...preferred.filter((k) => k in row),
+                ...Object.keys(row).filter(
+                  (k) => !["ts", "event", ...preferred].includes(k)
+                ),
+              ];
+              const extra = keys.map((k) => `${k}=${row[k]}`).join(" · ");
               return `<div class="log-row"><span class="log-ts">${ts}</span><span class="log-ev">${ev}</span><span>${extra}</span></div>`;
             })
             .join("")
-        : `<div class="hint">Nenhum evento ainda.</div>`;
+        : `<div class="hint">${t("no_events")}</div>`;
     } catch (err) {
       showAlert(err.message || String(err), "err");
     }
   }
 
-  async function reconcile() {
+  async function testAlerts() {
     if (!state.selected) return;
     setBusy(true);
     try {
-      const res = await api(`/entries/${state.selected}/reconcile`, {
+      const res = await api(`/entries/${state.selected}/test_notify`, {
         method: "POST",
         body: JSON.stringify({}),
       });
+      showAlert(res.message || t("msg_test_sent"), "ok");
+    } catch (err) {
+      showAlert(err.message || String(err), "err");
+    }
+    setBusy(false);
+  }
+
+  async function setReconcileEnabled(enabled) {
+    if (!state.selected) return;
+    setBusy(true);
+    try {
+      const res = await api(`/entries/${state.selected}/config`, {
+        method: "POST",
+        body: JSON.stringify({ reconcile_enabled: enabled }),
+      });
       applyEntry(res);
-      showAlert("Reconciliação executada.", "ok");
+      showAlert(enabled ? t("msg_reconcile_on") : t("msg_reconcile_off"), "ok");
+    } catch (err) {
+      showAlert(err.message || String(err), "err");
+    }
+    setBusy(false);
+  }
+
+  async function saveReconcileInterval() {
+    if (!state.selected) return;
+    const minutesEl = $("reconcile_interval_minutes");
+    const minutes = Math.max(1, Math.round(Number(minutesEl?.value || 2)));
+    setBusy(true);
+    try {
+      const res = await api(`/entries/${state.selected}/config`, {
+        method: "POST",
+        body: JSON.stringify({ reconcile_interval: minutes * 60 }),
+      });
+      applyEntry(res);
+      showAlert(t("reconcile_interval_saved"), "ok");
     } catch (err) {
       showAlert(err.message || String(err), "err");
     }
@@ -618,28 +971,70 @@
       modeEl.addEventListener("change", (ev) => setThresholdMode(ev.target.value));
     }
 
-    document.querySelectorAll(".tab").forEach((el) => {
+    document.querySelectorAll(".tab[data-tab]").forEach((el) => {
       el.addEventListener("click", () => switchTab(el.dataset.tab));
     });
     $("btn-refresh").addEventListener("click", () => refresh());
     $("btn-save-config").addEventListener("click", () => saveConfig());
     $("btn-save-cycle").addEventListener("click", () => saveConfig());
     $("btn-save-alerts").addEventListener("click", () => saveConfig());
-    $("btn-enable").addEventListener("click", () => setEnabled(true));
-    $("btn-disable").addEventListener("click", () => setEnabled(false));
-    $("btn-demand-on").addEventListener("click", () => setDemand(true));
-    $("btn-demand-off").addEventListener("click", () => setDemand(false));
-    $("btn-reconcile").addEventListener("click", () => reconcile());
+    const testAlertsBtn = $("btn-test-alerts");
+    if (testAlertsBtn) {
+      testAlertsBtn.addEventListener("click", () => testAlerts());
+    }
+    const toggleEnabledBtn = $("btn-toggle-enabled");
+    if (toggleEnabledBtn) {
+      toggleEnabledBtn.addEventListener("click", () => {
+        const on = Boolean(state.status?.enabled);
+        setEnabled(!on);
+      });
+    }
+    const toggleDemandBtn = $("btn-toggle-demand");
+    if (toggleDemandBtn) {
+      toggleDemandBtn.addEventListener("click", () => {
+        const on = Boolean(state.status?.desired_on);
+        setDemand(!on);
+      });
+    }
+    const toggleReconcileBtn = $("btn-toggle-reconcile");
+    if (toggleReconcileBtn) {
+      toggleReconcileBtn.addEventListener("click", () => {
+        const on = state.config?.reconcile_enabled !== false;
+        setReconcileEnabled(!on);
+      });
+    }
+    const saveReconcileBtn = $("btn-save-reconcile");
+    if (saveReconcileBtn) {
+      saveReconcileBtn.addEventListener("click", () => saveReconcileInterval());
+    }
     const btnLogs = $("btn-refresh-logs");
     if (btnLogs) btnLogs.addEventListener("click", () => loadLogs());
+    const historyModal = $("history-modal");
+    if (historyModal) {
+      historyModal.addEventListener("click", (ev) => {
+        if (ev.target === historyModal) closeHistoryModal();
+      });
+    }
+    const historyClose = $("history-modal-close");
+    if (historyClose) historyClose.addEventListener("click", () => closeHistoryModal());
+    document.querySelectorAll("[data-history-range]").forEach((el) => {
+      el.addEventListener("click", () => {
+        const range = el.getAttribute("data-history-range") || "1d";
+        if (!state.historyModal) {
+          openHistoryModal(range);
+        } else {
+          loadHistory(range);
+        }
+      });
+    });
     const addToggles = $("btn-add-toggles");
     if (addToggles) {
       addToggles.addEventListener("click", () =>
         openEntityModal(
           "toggle_entities",
           ["binary_sensor", "input_boolean", "switch"],
-          "Adicionar botões físicos",
-          "Pesquise e marque um ou mais botões/interruptores que alternam a demanda."
+          t("modal_buttons_title"),
+          t("modal_buttons_hint")
         )
       );
     }
@@ -649,8 +1044,8 @@
         openEntityModal(
           "led_entities",
           ["light", "switch", "input_boolean"],
-          "Adicionar LEDs / feedback",
-          "Pesquise e marque um ou mais dispositivos que mostram o status da bomba."
+          t("modal_leds_title"),
+          t("modal_leds_hint")
         )
       );
     }
@@ -660,8 +1055,8 @@
         openEntityModal(
           "notify_services",
           ["notify"],
-          "Adicionar serviços notify",
-          "Pesquise e marque um ou mais destinos (ex.: notify.mobile_app_seu_telefone)."
+          t("modal_notify_title"),
+          t("modal_notify_hint")
         )
       );
     }
@@ -696,8 +1091,20 @@
     });
   }
 
+  async function loadLanguage() {
+    try {
+      const res = await api("/language");
+      state.lang = I18n.resolveLang(res.language);
+    } catch {
+      state.lang = "en";
+    }
+    applyLanguage();
+  }
+
   wire();
-  refresh();
+  loadLanguage()
+    .then(() => refresh())
+    .catch(() => refresh());
   state.pollTimer = setInterval(() => {
     if (!state.busy) refresh();
   }, 5000);

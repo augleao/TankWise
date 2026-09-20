@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -12,11 +12,12 @@
         <header class="hero">
           <div>
             <h1>TankWise <span id="version" class="ver"></span></h1>
-            <p>Controle da bomba pelo nível da caixa d’água</p>
+            <p data-i18n="addon_sub">Pump control by water tank level</p>
           </div>
           <div class="hero-right">
-            <span id="badge" class="badge">carregando…</span>
-            <button type="button" class="secondary" id="btn-refresh">Atualizar</button>
+            <span id="badge" class="badge" data-i18n="loading">loading…</span>
+            <button type="button" id="btn-toggle-enabled" data-i18n="enable_automation">Enable automation</button>
+            <button type="button" class="secondary" id="btn-refresh" data-i18n="refresh">Refresh</button>
           </div>
         </header>
 
@@ -24,27 +25,27 @@
 
         <section class="card" id="empty-state" hidden>
           <div class="empty">
-            <h2>Integração ainda não configurada</h2>
-            <p>
-              1. Instale <strong>Tankwise</strong> pelo HACS<br />
-              2. Em <em>Dispositivos e serviços</em>, adicione a integração Tankwise<br />
-              3. Volte aqui e atualize
+            <h2 data-i18n="empty_title">Integration not configured yet</h2>
+            <p data-i18n="empty_steps" data-i18n-html>
+              1. Install <strong>Tankwise</strong> via HACS<br />
+              2. In <em>Devices & services</em>, add the Tankwise integration<br />
+              3. Come back here and refresh
             </p>
           </div>
         </section>
 
         <div id="app" hidden>
           <div class="tabs" role="tablist">
-            <button type="button" class="tab active" data-tab="monitor">Monitor</button>
-            <button type="button" class="tab" data-tab="config">Entidades</button>
-            <button type="button" class="tab" data-tab="cycle">Ciclo / histerese</button>
-            <button type="button" class="tab" data-tab="alerts">Alertas</button>
-            <button type="button" class="tab" data-tab="logs">Logs</button>
+            <button type="button" class="tab active" data-tab="monitor" data-i18n="tab_monitor">Monitor</button>
+            <button type="button" class="tab" data-tab="config" data-i18n="entities_title">Entities</button>
+            <button type="button" class="tab" data-tab="cycle" data-i18n="cycle_tab">Cycle / hysteresis</button>
+            <button type="button" class="tab" data-tab="alerts" data-i18n="tab_alerts">Alerts</button>
+            <button type="button" class="tab" data-tab="logs" data-i18n="tab_logs">Logs</button>
           </div>
 
           <section class="card" data-panel="monitor">
-            <h2>Status ao vivo</h2>
-            <p class="desc">Nível do tanque, demanda desejada e estado da bomba.</p>
+            <h2 data-i18n="live_status">Live status</h2>
+            <p class="desc" data-i18n="live_addon_desc">Tank level, desired demand and pump state.</p>
             <div class="visuals">
               <div class="visual" id="tank-visual"></div>
               <div class="visual" id="pump-visual"></div>
@@ -52,184 +53,205 @@
             <div class="stats" id="stats"></div>
             <div class="manual-box">
               <div>
-                <h3>Automação</h3>
-                <p class="hint">Liga/desliga o controlador (kill switch).</p>
+                <h3 data-i18n="pump_title">Pump</h3>
+                <p class="hint" data-i18n="pump_hint">Toggles persisted demand — the reconciler applies it to the physical pump.</p>
                 <div class="actions">
-                  <button type="button" id="btn-enable">Ligar automação</button>
-                  <button type="button" class="danger" id="btn-disable">Desligar</button>
-                </div>
-              </div>
-              <div>
-                <h3>Demanda manual</h3>
-                <p class="hint">Variável persistida 1/0 — o reconciliador executa na bomba.</p>
-                <div class="actions">
-                  <button type="button" id="btn-demand-on">Demanda ON</button>
-                  <button type="button" class="danger" id="btn-demand-off">Demanda OFF</button>
-                  <button type="button" class="secondary" id="btn-reconcile">Reconciliar agora</button>
+                  <button type="button" id="btn-toggle-demand" data-i18n="turn_pump_on">Turn pump on</button>
                 </div>
               </div>
             </div>
           </section>
 
           <section class="card" data-panel="config" hidden>
-            <h2>Entidades</h2>
-            <p class="desc">Selecione bomba, sensor de distância e opcionais.</p>
+            <h2 data-i18n="entities_title">Entities</h2>
+            <p class="desc" data-i18n="entities_addon_desc">Select pump, distance sensor and optionals.</p>
             <div class="grid">
               <div>
-                <label for="pump_entity">Switch da bomba</label>
+                <label for="pump_entity" data-i18n="pump_switch">Pump switch</label>
                 <select id="pump_entity" data-key="pump_entity"></select>
               </div>
               <div>
-                <label for="distance_entity">Sensor de distância</label>
+                <label for="distance_entity" data-i18n="distance_sensor">Distance sensor *</label>
                 <select id="distance_entity" data-key="distance_entity"></select>
               </div>
               <div style="grid-column: 1 / -1">
-                <label>Botões físicos (opcional)</label>
+                <label data-i18n="buttons_optional">Physical buttons (optional)</label>
                 <div class="entity-selected" id="toggle_entities_list"></div>
-                <button type="button" class="secondary" id="btn-add-toggles">Adicionar botões</button>
-                <p class="hint">Cada botão alterna a demanda da bomba (0↔1). Pode adicionar vários.</p>
+                <button type="button" class="secondary" id="btn-add-toggles" data-i18n="add_buttons">Add buttons</button>
+                <p class="hint" data-i18n="buttons_hint">Each button toggles pump demand (0↔1). You can add several.</p>
               </div>
               <div style="grid-column: 1 / -1">
-                <label>LEDs / indicadores (opcional)</label>
+                <label data-i18n="leds_optional">LEDs / indicators (optional)</label>
                 <div class="entity-selected" id="led_entities_list"></div>
-                <button type="button" class="secondary" id="btn-add-leds">Adicionar LEDs</button>
-                <p class="hint">Dispositivos que mostram o status da bomba. Pode adicionar vários.</p>
+                <button type="button" class="secondary" id="btn-add-leds" data-i18n="add_leds">Add LEDs</button>
+                <p class="hint" data-i18n="leds_hint">Devices that show pump status. You can add several.</p>
               </div>
             </div>
             <div class="grid" style="margin-top: 12px">
               <div>
-                <label for="full_distance">Distância cheio</label>
+                <label for="full_distance" data-i18n="full_distance">Full distance</label>
                 <input id="full_distance" data-key="full_distance" type="number" step="any" />
-                <p class="hint">Menor valor = tanque mais cheio</p>
+                <p class="hint" data-i18n="full_hint">Lower value = fuller tank</p>
               </div>
               <div>
-                <label for="empty_distance">Distância vazio</label>
+                <label for="empty_distance" data-i18n="empty_distance">Empty distance</label>
                 <input id="empty_distance" data-key="empty_distance" type="number" step="any" />
               </div>
               <div class="check">
                 <input id="expose_percentage" data-key="expose_percentage" type="checkbox" />
-                <label for="expose_percentage">Expor sensor de nível %</label>
+                <label for="expose_percentage" data-i18n="expose_percent">Expose level sensor (%)</label>
               </div>
             </div>
             <div class="actions">
-              <button type="button" id="btn-save-config">Salvar configuração</button>
+              <button type="button" id="btn-save-config" data-i18n="save_config">Save configuration</button>
+            </div>
+          </section>
+
+          <section class="card" data-panel="config" hidden>
+            <h2 data-i18n="reconcile_title">Reconciliation</h2>
+            <p class="desc" data-i18n="reconcile_desc">Reconciliation compares desired demand with the real pump state and fixes differences (turns the physical pump on/off when needed, respecting safety rules).</p>
+            <div class="grid">
+              <div>
+                <label for="reconcile_interval_minutes" data-i18n="reconcile_interval">Automatic interval (minutes)</label>
+                <input id="reconcile_interval_minutes" type="number" step="1" min="1" />
+                <p class="hint" data-i18n="reconcile_interval_hint">How often the system checks and aligns the pump when automatic reconciliation is enabled.</p>
+              </div>
+            </div>
+            <div class="actions">
+              <button type="button" id="btn-toggle-reconcile" data-i18n="enable_reconcile">Enable automatic reconciliation</button>
+              <button type="button" class="secondary" id="btn-save-reconcile" data-i18n="save_interval">Save interval</button>
             </div>
           </section>
 
           <section class="card" data-panel="cycle" hidden>
-            <h2>Histerese e ciclo trabalho/descanso</h2>
-            <p class="desc">Escolha limiares em distância ou em % do nível.</p>
+            <h2 data-i18n="cycle_hysteresis_title">Hysteresis and work/rest cycle</h2>
+            <p class="desc" data-i18n="cycle_addon_desc">Choose thresholds in distance or level %.</p>
             <div class="grid">
               <div style="grid-column: 1 / -1">
-                <label for="threshold_mode">Unidade dos limiares</label>
+                <label for="threshold_mode" data-i18n="threshold_mode">Threshold unit</label>
                 <select id="threshold_mode" data-key="threshold_mode">
-                  <option value="distance">Distância</option>
-                  <option value="percent">Porcentagem (%)</option>
+                  <option value="distance" data-i18n="unit_distance">Distance</option>
+                  <option value="percent" data-i18n="unit_percent">Percent (%)</option>
                 </select>
               </div>
               <div>
-                <label for="on_threshold" id="label_on_threshold">Limiar ligar</label>
+                <label for="on_threshold" id="label_on_threshold" data-i18n="on_threshold">On threshold</label>
                 <input id="on_threshold" data-key="on_threshold" type="number" step="any" />
               </div>
               <div>
-                <label for="off_threshold" id="label_off_threshold">Limiar desligar</label>
+                <label for="off_threshold" id="label_off_threshold" data-i18n="off_threshold">Off threshold</label>
                 <input id="off_threshold" data-key="off_threshold" type="number" step="any" />
               </div>
               <div>
-                <label for="on_hold_seconds">Hold para ligar (s)</label>
+                <label for="on_hold_seconds" data-i18n="hold_on_label">On hold (s)</label>
                 <input id="on_hold_seconds" data-key="on_hold_seconds" type="number" step="1" />
               </div>
               <div>
-                <label for="off_hold_seconds">Hold para desligar (s)</label>
+                <label for="off_hold_seconds" data-i18n="hold_off_label">Off hold (s)</label>
                 <input id="off_hold_seconds" data-key="off_hold_seconds" type="number" step="1" />
               </div>
               <div>
-                <label for="reconcile_interval">Intervalo reconciliar (s)</label>
-                <input id="reconcile_interval" data-key="reconcile_interval" type="number" step="1" />
-              </div>
-              <div>
-                <label for="reconcile_retries">Tentativas</label>
+                <label for="reconcile_retries" data-i18n="retries">Command retries</label>
                 <input id="reconcile_retries" data-key="reconcile_retries" type="number" step="1" />
               </div>
             </div>
             <div class="check" style="margin-top: 12px">
               <input id="timed_mode" type="checkbox" />
-              <label for="timed_mode">Modo cíclico (trabalho / descanso)</label>
+              <label for="timed_mode" data-i18n="cyclic_mode">Cyclic mode (work / rest)</label>
             </div>
             <div class="grid" id="cycle-fields">
               <div>
-                <label for="work_minutes">Minutos trabalhando</label>
+                <label for="work_minutes" data-i18n="work_minutes">Work minutes</label>
                 <input id="work_minutes" data-key="work_minutes" type="number" step="any" />
               </div>
               <div>
-                <label for="rest_minutes">Minutos descanso</label>
+                <label for="rest_minutes" data-i18n="rest_minutes">Rest minutes</label>
                 <input id="rest_minutes" data-key="rest_minutes" type="number" step="any" />
               </div>
               <div>
-                <label for="failsafe_margin_minutes">Margem failsafe (min)</label>
+                <label for="failsafe_margin_minutes" data-i18n="failsafe_margin">Failsafe margin (min)</label>
                 <input id="failsafe_margin_minutes" data-key="failsafe_margin_minutes" type="number" step="any" />
               </div>
             </div>
             <div class="actions">
-              <button type="button" id="btn-save-cycle">Salvar</button>
+              <button type="button" id="btn-save-cycle" data-i18n="save">Save</button>
             </div>
           </section>
 
           <section class="card" data-panel="alerts" hidden>
-            <h2>Notificações de nível</h2>
-            <p class="desc">Opcional — avisa quando o nível fica baixo.</p>
+            <h2 data-i18n="alerts_title">Level notifications</h2>
+            <p class="desc" data-i18n="alerts_addon_desc">Optional — notify when level is low.</p>
             <div class="grid">
               <div style="grid-column: 1 / -1">
-                <label>Serviços notify</label>
+                <label data-i18n="notify_services">Notify services</label>
                 <div class="entity-selected" id="notify_services_list"></div>
-                <button type="button" class="secondary" id="btn-add-notify">Adicionar notify</button>
-                <p class="hint">Pode adicionar vários destinos (celular, Telegram, etc.). Cada alerta é enviado a todos.</p>
+                <button type="button" class="secondary" id="btn-add-notify" data-i18n="add_notify">Add notify</button>
+                <p class="hint" data-i18n="notify_hint">You can add several targets (phone, Telegram, etc.). Each alert is sent to all.</p>
               </div>
               <div>
-                <label for="low_level_percent">Alerta baixo (%)</label>
+                <label for="low_level_percent" data-i18n="alert_low">Low alert (%)</label>
                 <input id="low_level_percent" data-key="low_level_percent" type="number" step="any" />
               </div>
               <div>
-                <label for="critical_level_percent">Alerta crítico (%)</label>
+                <label for="critical_level_percent" data-i18n="alert_critical">Critical alert (%)</label>
                 <input id="critical_level_percent" data-key="critical_level_percent" type="number" step="any" />
               </div>
               <div>
-                <label for="level_notify_hold_seconds">Hold notificação (s)</label>
+                <label for="level_notify_hold_seconds" data-i18n="notify_hold">Notification hold (s)</label>
                 <input id="level_notify_hold_seconds" data-key="level_notify_hold_seconds" type="number" step="1" />
               </div>
             </div>
             <div class="actions">
-              <button type="button" id="btn-save-alerts">Salvar</button>
+              <button type="button" id="btn-save-alerts" data-i18n="save">Save</button>
+              <button type="button" class="secondary" id="btn-test-alerts" data-i18n="test_alerts">Test alerts</button>
             </div>
           </section>
 
           <section class="card" data-panel="logs" hidden>
-            <h2>Logs do controlador</h2>
-            <p class="desc">Eventos recentes de demanda, histerese e reconciliação.</p>
+            <h2 data-i18n="logs_title">Controller logs</h2>
+            <p class="desc" data-i18n="logs_desc">Events persisted on Home Assistant disk (last 7 days). Pump-related events include level (%) and distance.</p>
             <div class="actions">
-              <button type="button" class="secondary" id="btn-refresh-logs">Atualizar logs</button>
+              <button type="button" class="secondary" id="btn-refresh-logs" data-i18n="refresh_logs">Refresh logs</button>
             </div>
             <div class="log-box" id="logs"></div>
           </section>
         </div>
       </div>
     </div>
-    <script src="static/app.js"></script>
-  
+
     <div class="modal-backdrop hidden" id="entity-modal">
       <div class="modal" role="dialog" aria-modal="true">
         <div class="modal-head">
-          <h3 id="entity-modal-title">Adicionar</h3>
-          <button type="button" class="modal-x" id="entity-modal-close" title="Fechar">×</button>
+          <h3 id="entity-modal-title" data-i18n="add">Add</h3>
+          <button type="button" class="modal-x" id="entity-modal-close" data-i18n-title="close" title="Close">×</button>
         </div>
         <p class="hint" id="entity-modal-hint"></p>
-        <input type="search" id="entity-modal-search" placeholder="Pesquisar entidade…" autocomplete="off" />
+        <input type="search" id="entity-modal-search" data-i18n-placeholder="search_entity" placeholder="Search entity…" autocomplete="off" />
         <div class="entity-list modal-list" id="entity-modal-list"></div>
         <div class="modal-actions">
-          <button type="button" class="secondary" id="entity-modal-cancel">Cancelar</button>
-          <button type="button" id="entity-modal-confirm">Adicionar selecionados</button>
+          <button type="button" class="secondary" id="entity-modal-cancel" data-i18n="cancel">Cancel</button>
+          <button type="button" id="entity-modal-confirm" data-i18n="add_selected">Add selected</button>
         </div>
       </div>
     </div>
+
+    <div class="modal-backdrop hidden" id="history-modal">
+      <div class="modal history-modal" role="dialog" aria-modal="true" data-i18n-aria="history_title" aria-label="Level and pump">
+        <div class="modal-head">
+          <h3 data-i18n="history_title">Level and pump</h3>
+          <button type="button" class="modal-x" id="history-modal-close" data-i18n-title="close" title="Close">×</button>
+        </div>
+        <div class="history-ranges" id="history-ranges">
+          <button type="button" class="tab" data-history-range="1h" data-i18n="range_1h">1 hour</button>
+          <button type="button" class="tab active" data-history-range="1d" data-i18n="range_1d">1 day</button>
+          <button type="button" class="tab" data-history-range="1w" data-i18n="range_1w">1 week</button>
+          <button type="button" class="tab" data-history-range="1m" data-i18n="range_1m">1 month</button>
+        </div>
+        <div class="history-body" id="history-body"></div>
+      </div>
+    </div>
+
+    <script src="static/i18n.js"></script>
+    <script src="static/app.js"></script>
   </body>
 </html>

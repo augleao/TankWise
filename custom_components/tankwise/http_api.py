@@ -13,6 +13,7 @@ from homeassistant.components.http import HomeAssistantView
 from homeassistant.core import HomeAssistant, callback
 
 from . import api_common
+from . import level_history
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -190,6 +191,54 @@ class TankwiseLogsView(HomeAssistantView):
         )
 
 
+class TankwiseLevelHistoryView(HomeAssistantView):
+    """Return tank level history for the chart modal."""
+
+    url = "/api/tankwise/entries/{entry_id}/level_history"
+    name = "api:tankwise:level_history"
+    requires_auth = True
+
+    async def get(self, request: web.Request, entry_id: str) -> web.Response:
+        hass: HomeAssistant = request.app["hass"]
+        entry = api_common.resolve_entry(hass, entry_id)
+        if entry is None:
+            return self.json_message("Tankwise entry not found", HTTPStatus.NOT_FOUND)
+        controller = api_common.get_controller(hass, entry)
+        if controller is None:
+            return self.json_message("Controller not ready", HTTPStatus.SERVICE_UNAVAILABLE)
+        range_key = request.query.get("range", "1d")
+        payload = await level_history.async_level_history(
+            hass,
+            entry_id=entry.entry_id,
+            distance_entity=controller.distance_entity,
+            pump_entity=controller.pump_entity,
+            full_distance=controller.full_distance,
+            empty_distance=controller.empty_distance,
+            range_key=range_key,
+        )
+        return self.json(payload)
+
+
+class TankwiseTestNotifyView(HomeAssistantView):
+    """Send a test notification to configured notify targets."""
+
+    url = "/api/tankwise/entries/{entry_id}/test_notify"
+    name = "api:tankwise:test_notify"
+    requires_auth = True
+
+    async def post(self, request: web.Request, entry_id: str) -> web.Response:
+        hass: HomeAssistant = request.app["hass"]
+        entry = api_common.resolve_entry(hass, entry_id)
+        if entry is None:
+            return self.json_message("Tankwise entry not found", HTTPStatus.NOT_FOUND)
+        controller = api_common.get_controller(hass, entry)
+        if controller is None:
+            return self.json_message("Controller not ready", HTTPStatus.SERVICE_UNAVAILABLE)
+        result = await controller.async_test_notify()
+        status = HTTPStatus.OK if result.get("ok") else HTTPStatus.BAD_REQUEST
+        return self.json(result, status_code=status)
+
+
 @callback
 def async_register_http(hass: HomeAssistant) -> None:
     """Register Tankwise HTTP views."""
@@ -201,4 +250,6 @@ def async_register_http(hass: HomeAssistant) -> None:
     hass.http.register_view(TankwiseReconcileView)
     hass.http.register_view(TankwiseEntitiesView)
     hass.http.register_view(TankwiseLogsView)
+    hass.http.register_view(TankwiseLevelHistoryView)
+    hass.http.register_view(TankwiseTestNotifyView)
     _LOGGER.debug("Tankwise HTTP API registered")

@@ -14,6 +14,8 @@ Há duas peças no mesmo repositório:
 - Histerese pelo sensor de **distância até a água** + tempos de hold
 - Sensor de **nível %** (distância menor = tanque mais cheio)
 - Ciclo trabalho/descanso, botões físicos, LEDs e notificações (opcional)
+- Interface em **inglês ou português**, conforme o idioma do Home Assistant
+- Histórico gráfico de nível/bomba e logs persistentes (7 dias)
 
 ## Como funciona
 

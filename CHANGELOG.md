@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-09-20
+
+### Added
+- **i18n EN/PT**: painel lateral, add-on e mensagens de notificação/histórico seguem o idioma do Home Assistant (`pt*` → português, demais → inglês).
+- **Logs persistentes** (7 dias) no disco do HA, com nível (%) e distância nos eventos da bomba.
+- **Histórico gráfico** de nível e bomba (1h / 1d / 1 semana / 1 mês) ao tocar no tanque ou no status da bomba.
+- Botão **Testar alertas** para enviar notificação de teste aos destinos configurados.
+- Tooltip explicando o seletor de **Instalação** quando há mais de uma entrada Tankwise.
+
+### Changed
+- Automação: um único toggle Ligar/Desligar no cabeçalho (substitui os dois botões).
+- Demanda manual: um único toggle Ligar/Desligar bomba.
+- Reconciliação na aba Entidades: intervalo em minutos + habilitar/desabilitar; removido “Reconciliar agora”.
+
 ## [0.4.6] - 2026-09-14
 
 ### Changed

@@ -18,10 +18,12 @@ O add-on **não** substitui a lógica da bomba — ele fala com a integração v
 
 ## Uso
 
-- **Monitor** — nível do tanque, demanda, bomba, ligar/desligar automação
-- **Entidades** — switch da bomba, sensor de distância, calibração
+- **Monitor** — nível do tanque, demanda, bomba, ligar/desligar automação; toque no tanque/bomba para ver o histórico
+- **Entidades** — switch da bomba, sensor de distância, calibração e reconciliação automática
 - **Ciclo / histerese** — limiares, holds, trabalho/descanso
-- **Alertas** — notify opcional
+- **Alertas** — notify opcional + teste de alerta
+- **Logs** — eventos persistidos (7 dias)
+- Idioma da UI: inglês ou português, conforme o Home Assistant
 
 ## Desenvolvimento local
 

@@ -25,6 +25,7 @@ CONF_OFF_HOLD_SECONDS: Final = "off_hold_seconds"
 
 CONF_RECONCILE_INTERVAL: Final = "reconcile_interval"
 CONF_RECONCILE_RETRIES: Final = "reconcile_retries"
+CONF_RECONCILE_ENABLED: Final = "reconcile_enabled"
 
 CONF_WORK_MINUTES: Final = "work_minutes"
 CONF_REST_MINUTES: Final = "rest_minutes"
@@ -46,8 +47,9 @@ DEFAULT_ON_THRESHOLD: Final = 101.0
 DEFAULT_OFF_THRESHOLD: Final = 84.0
 DEFAULT_ON_HOLD_SECONDS: Final = 120
 DEFAULT_OFF_HOLD_SECONDS: Final = 120
-DEFAULT_RECONCILE_INTERVAL: Final = 120
+DEFAULT_RECONCILE_INTERVAL: Final = 120  # seconds (2 minutes)
 DEFAULT_RECONCILE_RETRIES: Final = 3
+DEFAULT_RECONCILE_ENABLED: Final = True
 DEFAULT_WORK_MINUTES: Final = 0
 DEFAULT_REST_MINUTES: Final = 0
 DEFAULT_FAILSAFE_MARGIN_MINUTES: Final = 5
@@ -89,3 +91,39 @@ PHASE_RESTING: Final = "resting"
 # Storage
 STORAGE_VERSION: Final = 1
 STORAGE_KEY: Final = f"{DOMAIN}.demand"
+LOG_STORAGE_VERSION: Final = 1
+LOG_STORAGE_KEY: Final = f"{DOMAIN}.event_log"
+LOG_RETENTION_DAYS: Final = 7
+LOG_QUERY_MAX: Final = 2000
+
+# Events that always record tank level (%) and ultrasonic distance
+PUMP_RELATED_LOG_EVENTS: Final = frozenset(
+    {
+        "demand_changed",
+        "blocked_full_level",
+        "enabled_changed",
+        "on_condition_armed",
+        "on_condition_cleared",
+        "off_condition_armed",
+        "off_condition_cleared",
+        "pump_command",
+        "pump_reconcile_ok",
+        "pump_reconcile_failed",
+        "safety_full_level",
+        "cyclic_failsafe",
+        "boot_recovery",
+    }
+)
+
+# Level history chart ranges (UI + API)
+LEVEL_HISTORY_RANGE_1H: Final = "1h"
+LEVEL_HISTORY_RANGE_1D: Final = "1d"
+LEVEL_HISTORY_RANGE_1W: Final = "1w"
+LEVEL_HISTORY_RANGE_1M: Final = "1m"
+LEVEL_HISTORY_RANGES: Final = (
+    LEVEL_HISTORY_RANGE_1H,
+    LEVEL_HISTORY_RANGE_1D,
+    LEVEL_HISTORY_RANGE_1W,
+    LEVEL_HISTORY_RANGE_1M,
+)
+LEVEL_HISTORY_MAX_POINTS: Final = 240

@@ -295,6 +295,50 @@ select[multiple] {
   gap: 8px;
 }
 
+.history-modal {
+  width: min(760px, 100%);
+  max-height: min(90vh, 820px);
+}
+
+.history-ranges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 4px 0 8px;
+}
+
+.history-body {
+  overflow: auto;
+}
+
+.level-chart {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.tank-hit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  background: transparent;
+  padding: 4px;
+  cursor: pointer;
+  border-radius: 14px;
+}
+
+.tank-hit:hover {
+  background: rgba(27, 127, 90, 0.06);
+}
+
+.tank-hint {
+  font-size: 0.72rem;
+  color: var(--tw-muted);
+  letter-spacing: 0.02em;
+}
+
 .modal-head {
   display: flex;
   align-items: center;

@@ -10,7 +10,8 @@ from homeassistant.components import websocket_api
 from homeassistant.core import HomeAssistant
 
 from . import api_common
-from .const import DOMAIN
+from . import level_history
+from .const import DOMAIN, LEVEL_HISTORY_RANGES
 
 
 @websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/list"})
@@ -195,6 +196,72 @@ async def websocket_logs(
     )
 
 
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): f"{DOMAIN}/level_history",
+        vol.Optional("entry_id"): str,
+        vol.Optional("range"): vol.In(list(LEVEL_HISTORY_RANGES)),
+    }
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def websocket_level_history(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    entry = api_common.resolve_entry(hass, msg.get("entry_id"))
+    if entry is None:
+        connection.send_error(msg["id"], "not_found", "Tankwise entry not found")
+        return
+    controller = api_common.get_controller(hass, entry)
+    if controller is None:
+        connection.send_error(msg["id"], "not_ready", "Controller not ready")
+        return
+    payload = await level_history.async_level_history(
+        hass,
+        entry_id=entry.entry_id,
+        distance_entity=controller.distance_entity,
+        pump_entity=controller.pump_entity,
+        full_distance=controller.full_distance,
+        empty_distance=controller.empty_distance,
+        range_key=msg.get("range") or "1d",
+    )
+    connection.send_result(msg["id"], payload)
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): f"{DOMAIN}/test_notify",
+        vol.Optional("entry_id"): str,
+    }
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def websocket_test_notify(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    entry = api_common.resolve_entry(hass, msg.get("entry_id"))
+    if entry is None:
+        connection.send_error(msg["id"], "not_found", "Tankwise entry not found")
+        return
+    controller = api_common.get_controller(hass, entry)
+    if controller is None:
+        connection.send_error(msg["id"], "not_ready", "Controller not ready")
+        return
+    result = await controller.async_test_notify()
+    if not result.get("ok"):
+        connection.send_error(
+            msg["id"],
+            "no_notify",
+            str(result.get("message") or "Nenhum serviço notify configurado."),
+        )
+        return
+    connection.send_result(msg["id"], result)
+
+
 def async_register_websockets(hass: HomeAssistant) -> None:
     """Register Tankwise websocket commands."""
     websocket_api.async_register_command(hass, websocket_list)
@@ -204,3 +271,5 @@ def async_register_websockets(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, websocket_set_demand)
     websocket_api.async_register_command(hass, websocket_reconcile)
     websocket_api.async_register_command(hass, websocket_logs)
+    websocket_api.async_register_command(hass, websocket_level_history)
+    websocket_api.async_register_command(hass, websocket_test_notify)
