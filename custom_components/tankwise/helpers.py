@@ -127,3 +127,31 @@ def is_off_condition(
             return False
         return percent >= off_threshold
     return distance < off_threshold
+
+
+def downsample_points(
+    points: list[dict[str, Any]],
+    max_points: int = 240,
+) -> list[dict[str, Any]]:
+    """Thin a time series to at most max_points, keeping first/last."""
+    if max_points < 2 or len(points) <= max_points:
+        return list(points)
+    if max_points == 2:
+        return [points[0], points[-1]]
+    out: list[dict[str, Any]] = [points[0]]
+    last_index = len(points) - 1
+    buckets = max_points - 2
+    for bucket in range(buckets):
+        # Pick the point nearest the bucket center (skip endpoints).
+        start = 1 + int(bucket * last_index / (buckets + 1))
+        end = 1 + int((bucket + 1) * last_index / (buckets + 1))
+        if end <= start:
+            end = start + 1
+        mid = (start + end - 1) // 2
+        mid = min(max(mid, 1), last_index - 1)
+        candidate = points[mid]
+        if candidate is not out[-1]:
+            out.append(candidate)
+    if points[-1] is not out[-1]:
+        out.append(points[-1])
+    return out

@@ -12,6 +12,7 @@ sys.path.insert(0, str(ROOT / "custom_components" / "tankwise"))
 
 from helpers import (  # noqa: E402
     distance_to_percent,
+    downsample_points,
     merge_entry_config,
     normalize_notify_services,
     with_normalized_notify,
@@ -69,3 +70,16 @@ def test_with_normalized_notify_prefers_list():
         {"notify_service": "notify.legacy", "notify_services": ["notify.new"]}
     )
     assert cfg["notify_services"] == ["notify.new"]
+
+
+def test_downsample_keeps_endpoints_and_cap():
+    points = [{"ts": str(i), "percent": float(i)} for i in range(1000)]
+    out = downsample_points(points, 50)
+    assert len(out) <= 50
+    assert out[0] == points[0]
+    assert out[-1] == points[-1]
+
+
+def test_downsample_short_series_unchanged():
+    points = [{"ts": "a", "percent": 1.0}, {"ts": "b", "percent": 2.0}]
+    assert downsample_points(points, 240) == points

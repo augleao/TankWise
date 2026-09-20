@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from collections import deque
 
 import logging
@@ -52,6 +53,7 @@ from .const import (
     CONF_PUMP_ENTITY,
     CONF_RECONCILE_INTERVAL,
     CONF_RECONCILE_RETRIES,
+    CONF_RECONCILE_ENABLED,
     CONF_REST_MINUTES,
     CONF_TOGGLE_ENTITIES,
     CONF_WORK_MINUTES,
@@ -65,16 +67,21 @@ from .const import (
     DEFAULT_ON_THRESHOLD,
     DEFAULT_RECONCILE_INTERVAL,
     DEFAULT_RECONCILE_RETRIES,
+    DEFAULT_RECONCILE_ENABLED,
     DEFAULT_REST_MINUTES,
     DEFAULT_WORK_MINUTES,
-    DOMAIN,
     EVENT_DEMAND_CHANGED,
     EVENT_ENABLED_CHANGED,
     EVENT_FAULT,
     EVENT_RECONCILE,
+    LOG_QUERY_MAX,
+    LOG_RETENTION_DAYS,
+    LOG_STORAGE_KEY,
+    LOG_STORAGE_VERSION,
     PHASE_IDLE,
     PHASE_RESTING,
     PHASE_WORKING,
+    PUMP_RELATED_LOG_EVENTS,
     STORAGE_KEY,
     STORAGE_VERSION,
 )
@@ -85,6 +92,7 @@ from .helpers import (
     is_on_state,
     parse_float,
 )
+from .i18n import hass_lang, t as i18n_t
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -122,6 +130,9 @@ class TankwiseController:
         self._listeners: list[Callable[[], None]] = []
         self._unsubs: list[CALLBACK_TYPE] = []
         self._store = Store(hass, STORAGE_VERSION, f"{STORAGE_KEY}_{entry_id}")
+        self._log_store = Store(
+            hass, LOG_STORAGE_VERSION, f"{LOG_STORAGE_KEY}_{entry_id}"
+        )
 
         self.desired_on: bool = False
         self.enabled: bool = True
@@ -129,7 +140,9 @@ class TankwiseController:
         self.reconcile_healthy: bool = True
         self.last_error: str | None = None
         self.reason: str = "init"
-        self._event_log: deque[dict] = deque(maxlen=100)
+        self._event_log: deque[dict] = deque()
+        self._log_persist_task: asyncio.Task | None = None
+        self._log_dirty: bool = False
         self._started: bool = False
 
         self._on_condition_since: datetime | None = None
@@ -196,6 +209,10 @@ class TankwiseController:
     @property
     def reconcile_retries(self) -> int:
         return int(self.config.get(CONF_RECONCILE_RETRIES, DEFAULT_RECONCILE_RETRIES))
+
+    @property
+    def reconcile_enabled(self) -> bool:
+        return bool(self.config.get(CONF_RECONCILE_ENABLED, DEFAULT_RECONCILE_ENABLED))
 
     @property
     def work_minutes(self) -> float:
@@ -266,6 +283,8 @@ class TankwiseController:
                 self.reason,
             )
 
+        await self._async_load_event_logs()
+
         tracked = {
             self.pump_entity,
             self.distance_entity,
@@ -312,10 +331,18 @@ class TankwiseController:
         self._notify_listeners()
 
     async def async_unload(self) -> None:
-        """Detach listeners."""
+        """Detach listeners and flush pending log writes."""
         while self._unsubs:
             unsub = self._unsubs.pop()
             unsub()
+        if self._log_persist_task and not self._log_persist_task.done():
+            self._log_persist_task.cancel()
+            try:
+                await self._log_persist_task
+            except asyncio.CancelledError:
+                pass
+        if self._log_dirty:
+            await self._async_save_event_logs()
 
     def async_add_listener(self, update_callback: Callable[[], None]) -> Callable[[], None]:
         """Register an entity update callback; return unsubscribe."""
@@ -333,25 +360,107 @@ class TankwiseController:
         for listener in list(self._listeners):
             listener()
 
+    def _tank_readings(self) -> tuple[float | None, float | None]:
+        """Return current (distance, percent) from the distance entity."""
+        distance = parse_float(self.hass.states.get(self.distance_entity))
+        percent = None
+        if distance is not None:
+            percent = distance_to_percent(
+                distance, self.full_distance, self.empty_distance
+            )
+        return distance, percent
 
     def _log(self, event: str, **details) -> None:
-        """Append a structured event to the in-memory ring buffer."""
-        from homeassistant.util import dt as dt_util
-
-        entry = {
+        """Append a structured event and schedule disk persistence."""
+        entry: dict[str, Any] = {
             "ts": dt_util.utcnow().isoformat(),
             "event": event,
             "reason": self.reason,
             "desired_on": self.desired_on,
             "enabled": self.enabled,
-            **{k: v for k, v in details.items() if v is not None},
         }
+        if event in PUMP_RELATED_LOG_EVENTS:
+            distance, percent = self._tank_readings()
+            if "distance" not in details:
+                details["distance"] = distance
+            if "percent" not in details:
+                details["percent"] = percent
+        for key, value in details.items():
+            if value is None:
+                if key in ("distance", "percent"):
+                    entry[key] = None
+                continue
+            if key == "distance":
+                entry[key] = round(float(value), 3)
+            elif key == "percent":
+                entry[key] = round(float(value), 1)
+            else:
+                entry[key] = value
+
         self._event_log.appendleft(entry)
+        self._prune_event_logs()
+        self._log_dirty = True
+        self._schedule_log_persist()
         _LOGGER.debug("Tankwise event %s %s", event, details)
 
+    def _prune_event_logs(self) -> None:
+        """Drop entries older than the retention window."""
+        cutoff = dt_util.utcnow() - timedelta(days=LOG_RETENTION_DAYS)
+        kept: deque[dict] = deque()
+        for entry in self._event_log:
+            ts = dt_util.parse_datetime(str(entry.get("ts", "")))
+            if ts is None:
+                kept.append(entry)
+                continue
+            if dt_util.as_utc(ts) >= cutoff:
+                kept.append(entry)
+        self._event_log = kept
+
+    def _schedule_log_persist(self) -> None:
+        """Debounce log writes to Home Assistant storage."""
+        if self._log_persist_task and not self._log_persist_task.done():
+            return
+        self._log_persist_task = self.hass.async_create_task(
+            self._async_debounced_save_event_logs()
+        )
+
+    async def _async_debounced_save_event_logs(self) -> None:
+        try:
+            await asyncio.sleep(1.0)
+            if self._log_dirty:
+                await self._async_save_event_logs()
+        except asyncio.CancelledError:
+            raise
+
+    async def _async_load_event_logs(self) -> None:
+        data = await self._log_store.async_load()
+        if not isinstance(data, dict):
+            return
+        rows = data.get("logs")
+        if not isinstance(rows, list):
+            return
+        self._event_log = deque(
+            entry for entry in rows if isinstance(entry, dict)
+        )
+        before = len(self._event_log)
+        self._prune_event_logs()
+        if len(self._event_log) != before:
+            self._log_dirty = True
+            await self._async_save_event_logs()
+        _LOGGER.info(
+            "Restored %s Tankwise event log entries (retention=%sd)",
+            len(self._event_log),
+            LOG_RETENTION_DAYS,
+        )
+
+    async def _async_save_event_logs(self) -> None:
+        await self._log_store.async_save({"logs": list(self._event_log)})
+        self._log_dirty = False
+
     def recent_logs(self, limit: int = 50) -> list[dict]:
-        """Return newest-first log entries."""
-        return list(self._event_log)[: max(1, min(limit, 100))]
+        """Return newest-first log entries (persisted on disk, last 7 days)."""
+        capped = max(1, min(int(limit), LOG_QUERY_MAX))
+        return list(self._event_log)[:capped]
 
     # ------------------------------------------------------------------ snapshot
     def snapshot(self) -> TankwiseSnapshot:
@@ -549,7 +658,8 @@ class TankwiseController:
     async def _async_interval(self, _now: datetime) -> None:
         await self._async_evaluate_level()
         await self._async_evaluate_cycle()
-        await self.async_reconcile(reason="interval")
+        if self.reconcile_enabled:
+            await self.async_reconcile(reason="interval")
         self._notify_listeners()
 
     async def _async_state_changed(self, event: Event) -> None:
@@ -674,8 +784,12 @@ class TankwiseController:
                 and not self._critical_notified
             ):
                 await self._async_notify(
-                    "Tankwise critical level",
-                    f"Tank level is critically low ({percent:.0f}%).",
+                    i18n_t(hass_lang(self.hass), "notify_critical_title"),
+                    i18n_t(
+                        hass_lang(self.hass),
+                        "notify_critical_body",
+                        percent=percent,
+                    ),
                 )
                 self._critical_notified = True
         else:
@@ -691,8 +805,12 @@ class TankwiseController:
                 and not self._critical_notified
             ):
                 await self._async_notify(
-                    "Tankwise low level",
-                    f"Tank level is low ({percent:.0f}%).",
+                    i18n_t(hass_lang(self.hass), "notify_low_title"),
+                    i18n_t(
+                        hass_lang(self.hass),
+                        "notify_low_body",
+                        percent=percent,
+                    ),
                 )
                 self._low_notified = True
         else:
@@ -737,10 +855,15 @@ class TankwiseController:
                 self._failsafe_triggered = True
                 self.reconcile_healthy = False
                 self.last_error = "cyclic_failsafe"
+                self._log(
+                    "cyclic_failsafe",
+                    on_minutes=round(on_minutes, 1),
+                    limit_minutes=limit,
+                )
                 await self.async_set_demand(False, reason="cyclic_failsafe", force=True)
                 await self._async_notify(
-                    "Tankwise failsafe",
-                    "Pump stayed ON longer than work+margin; demand forced OFF.",
+                    i18n_t(hass_lang(self.hass), "notify_failsafe_title"),
+                    i18n_t(hass_lang(self.hass), "notify_failsafe_body"),
                 )
                 self.hass.bus.async_fire(
                     EVENT_FAULT,
@@ -793,10 +916,23 @@ class TankwiseController:
                 self.cycle_phase = PHASE_IDLE
                 self._phase_started_at = None
                 self._work_started_at = None
+                self._log(
+                    "safety_full_level",
+                    distance=distance,
+                    percent=percent,
+                )
                 await self._async_persist()
                 self._notify_listeners()
             pump_on = is_on_state(self.hass.states.get(self.pump_entity))
             if pump_on:
+                self._log(
+                    "pump_command",
+                    service="turn_off",
+                    target_on=False,
+                    reason="safety_full_level",
+                    distance=distance,
+                    percent=percent,
+                )
                 await self._async_call_pump("turn_off")
 
         await self._async_evaluate_cycle()
@@ -828,6 +964,15 @@ class TankwiseController:
             return
 
         service = "turn_on" if target_on else "turn_off"
+        self._log(
+            "pump_command",
+            service=service,
+            target_on=target_on,
+            pump_was=pump_on,
+            reason=reason,
+            distance=distance,
+            percent=percent,
+        )
         success = await self._async_call_pump(service)
         if success:
             # Verify
@@ -837,18 +982,38 @@ class TankwiseController:
         if success:
             self.reconcile_healthy = True
             self.last_error = None
+            self._log(
+                "pump_reconcile_ok",
+                target_on=target_on,
+                reason=reason,
+                distance=distance,
+                percent=percent,
+            )
         else:
             self.reconcile_healthy = False
             self.last_error = "reconcile_failed"
+            self._log(
+                "pump_reconcile_failed",
+                target_on=target_on,
+                reason=reason,
+                distance=distance,
+                percent=percent,
+            )
             _LOGGER.error(
                 "Tankwise failed to reconcile pump to %s (%s)",
                 target_on,
                 reason,
             )
             if self.notify_services:
+                lang = hass_lang(self.hass)
                 await self._async_notify(
-                    "Tankwise reconcile fault",
-                    f"Could not set {self.pump_entity} to {'ON' if target_on else 'OFF'}.",
+                    i18n_t(lang, "notify_reconcile_title"),
+                    i18n_t(
+                        lang,
+                        "notify_reconcile_body",
+                        entity=self.pump_entity,
+                        state=i18n_t(lang, "state_on" if target_on else "state_off"),
+                    ),
                 )
 
         await self._async_sync_leds()
@@ -923,3 +1088,24 @@ class TankwiseController:
                 )
             except Exception as err:  # noqa: BLE001
                 _LOGGER.warning("Notify failed via %s: %s", service, err)
+
+    async def async_test_notify(self) -> dict[str, Any]:
+        """Send a test notification to all configured notify targets."""
+        services = self.notify_services
+        lang = hass_lang(self.hass)
+        if not services:
+            return {
+                "ok": False,
+                "sent": 0,
+                "message": i18n_t(lang, "test_no_notify"),
+            }
+        await self._async_notify(
+            i18n_t(lang, "test_title"),
+            i18n_t(lang, "test_body"),
+        )
+        self._log("test_notify", targets=len(services))
+        return {
+            "ok": True,
+            "sent": len(services),
+            "message": i18n_t(lang, "test_sent", count=len(services)),
+        }

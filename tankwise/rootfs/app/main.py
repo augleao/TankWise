@@ -58,6 +58,43 @@ def _json_error(message: str, status: int = 502) -> web.Response:
     return web.json_response({"message": message}, status=status)
 
 
+
+_MSG = {
+    "en": {
+        "integration_missing": (
+            "Tankwise integration not found. "
+            "Install via HACS and add it under Devices & services."
+        ),
+        "invalid_json": "Invalid JSON",
+        "cannot_list_entities": "Could not list entities",
+    },
+    "pt": {
+        "integration_missing": (
+            "Integração Tankwise não encontrada. "
+            "Instale via HACS e adicione em Dispositivos e serviços."
+        ),
+        "invalid_json": "JSON inválido",
+        "cannot_list_entities": "Não foi possível listar entidades",
+    },
+}
+
+
+def _resolve_lang(raw: object) -> str:
+    text = str(raw or "en").lower()
+    return "pt" if text.startswith("pt") else "en"
+
+
+def _t(lang: str, key: str) -> str:
+    code = _resolve_lang(lang)
+    return _MSG.get(code, _MSG["en"]).get(key) or _MSG["en"].get(key) or key
+
+
+async def _ha_lang(session: ClientSession) -> str:
+    status, data = await _ha(session, "GET", "/api/config")
+    if status < 400 and isinstance(data, dict):
+        return _resolve_lang(data.get("language"))
+    return "en"
+
 async def api_health(_: web.Request) -> web.Response:
     ok = bool(TOKEN)
     return web.json_response(
@@ -69,17 +106,22 @@ async def api_health(_: web.Request) -> web.Response:
     )
 
 
+
+async def api_language(request: web.Request) -> web.Response:
+    session: ClientSession = request.app["session"]
+    lang = await _ha_lang(session)
+    return web.json_response({"language": lang})
+
+
 async def api_entries(request: web.Request) -> web.Response:
     session: ClientSession = request.app["session"]
     status, data = await _ha(session, "GET", "/api/tankwise/entries")
     if status == 404:
+        lang = await _ha_lang(session)
         return web.json_response(
             {
                 "entries": [],
-                "message": (
-                    "Integração Tankwise não encontrada. "
-                    "Instale via HACS e adicione em Dispositivos e serviços."
-                ),
+                "message": _t(lang, "integration_missing"),
             }
         )
     if status >= 400:
@@ -112,7 +154,8 @@ async def api_config(request: web.Request) -> web.Response:
     try:
         body = await request.json()
     except Exception:  # noqa: BLE001
-        return _json_error("JSON inválido", 400)
+        lang = await _ha_lang(session)
+        return _json_error(_t(lang, "invalid_json"), 400)
     status, data = await _ha(
         session,
         "POST",
@@ -195,7 +238,8 @@ async def api_entities(request: web.Request) -> web.Response:
         # Fallback: list from /api/states when integration HTTP API missing
         st, states = await _ha(session, "GET", "/api/states")
         if st >= 400 or not isinstance(states, list):
-            return _json_error("Não foi possível listar entidades", status=st)
+            lang = await _ha_lang(session)
+            return _json_error(_t(lang, "cannot_list_entities"), status=st)
         domains = {
             "switch",
             "sensor",
@@ -276,12 +320,49 @@ async def api_logs(request: web.Request) -> web.Response:
         )
     return web.json_response(data)
 
+
+async def api_level_history(request: web.Request) -> web.Response:
+    session: ClientSession = request.app["session"]
+    entry_id = request.match_info["entry_id"]
+    range_key = request.rel_url.query.get("range", "1d")
+    status, data = await _ha(
+        session,
+        "GET",
+        f"/api/tankwise/entries/{entry_id}/level_history?range={range_key}",
+    )
+    if status >= 400:
+        return _json_error(
+            (data or {}).get("message", f"HA API error {status}")
+            if isinstance(data, dict)
+            else f"HA API error {status}",
+            status=status,
+        )
+    return web.json_response(data)
+
+
+async def api_test_notify(request: web.Request) -> web.Response:
+    session: ClientSession = request.app["session"]
+    entry_id = request.match_info["entry_id"]
+    status, data = await _ha(
+        session, "POST", f"/api/tankwise/entries/{entry_id}/test_notify", json_body={}
+    )
+    if status >= 400:
+        return _json_error(
+            (data or {}).get("message", f"HA API error {status}")
+            if isinstance(data, dict)
+            else f"HA API error {status}",
+            status=status,
+        )
+    return web.json_response(data)
+
+
 def create_app() -> web.Application:
     app = web.Application()
     app.on_startup.append(on_startup)
     app.on_cleanup.append(on_cleanup)
 
     app.router.add_get("/api/health", api_health)
+    app.router.add_get("/api/language", api_language)
     app.router.add_get("/api/entries", api_entries)
     app.router.add_get("/api/entries/{entry_id}", api_entry)
     app.router.add_post("/api/entries/{entry_id}/config", api_config)
@@ -289,6 +370,8 @@ def create_app() -> web.Application:
     app.router.add_post("/api/entries/{entry_id}/demand", api_demand)
     app.router.add_post("/api/entries/{entry_id}/reconcile", api_reconcile)
     app.router.add_get("/api/entries/{entry_id}/logs", api_logs)
+    app.router.add_get("/api/entries/{entry_id}/level_history", api_level_history)
+    app.router.add_post("/api/entries/{entry_id}/test_notify", api_test_notify)
     app.router.add_get("/api/entities", api_entities)
 
     app.router.add_get("/", index)
