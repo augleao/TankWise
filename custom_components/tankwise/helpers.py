@@ -155,3 +155,41 @@ def downsample_points(
     if points[-1] is not out[-1]:
         out.append(points[-1])
     return out
+
+
+def call_history_compat(func: Any, *args: Any, **kwargs: Any) -> Any:
+    """Call a recorder history helper, dropping kwargs unsupported by this HA version."""
+    import inspect
+
+    try:
+        params = inspect.signature(func).parameters
+    except (TypeError, ValueError):
+        params = {}
+
+    if params and any(p.kind == inspect.Parameter.VAR_KEYWORD for p in params.values()):
+        filtered = kwargs
+    elif params:
+        filtered = {key: value for key, value in kwargs.items() if key in params}
+    else:
+        filtered = kwargs
+
+    try:
+        return func(*args, **filtered)
+    except TypeError:
+        # Last-resort: strip optional kwargs one by one.
+        optional = [
+            "significant_changes_only",
+            "no_attributes",
+            "include_start_time_state",
+            "end_time",
+        ]
+        remaining = dict(filtered)
+        for key in optional:
+            if key not in remaining:
+                continue
+            remaining.pop(key, None)
+            try:
+                return func(*args, **remaining)
+            except TypeError:
+                continue
+        raise
