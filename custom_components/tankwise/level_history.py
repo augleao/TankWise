@@ -17,7 +17,7 @@ from .const import (
     LEVEL_HISTORY_RANGE_1W,
     LEVEL_HISTORY_RANGES,
 )
-from .helpers import distance_to_percent, downsample_points
+from .helpers import call_history_compat, distance_to_percent, downsample_points
 from .i18n import hass_lang, t as i18n_t
 
 _LOGGER = logging.getLogger(__name__)
@@ -114,22 +114,24 @@ async def async_level_history(
     entity_ids = [distance_entity, pump_entity]
 
     def _fetch_one(entity_id: str) -> dict[str, list]:
-        if hasattr(recorder_history, "state_changes_during_period"):
-            return recorder_history.state_changes_during_period(
+        # Prefer get_significant_states — widely available and accepts entity lists.
+        if hasattr(recorder_history, "get_significant_states"):
+            return call_history_compat(
+                recorder_history.get_significant_states,
                 hass,
                 start_time=start,
                 end_time=end,
-                entity_id=entity_id,
-                include_start_time_state=True,
+                entity_ids=[entity_id],
                 significant_changes_only=False,
+                include_start_time_state=True,
                 no_attributes=True,
             )
-        return recorder_history.get_significant_states(
+        return call_history_compat(
+            recorder_history.state_changes_during_period,
             hass,
             start_time=start,
             end_time=end,
-            entity_ids=[entity_id],
-            significant_changes_only=False,
+            entity_id=entity_id,
             include_start_time_state=True,
             no_attributes=True,
         )
@@ -137,25 +139,29 @@ async def async_level_history(
     def _fetch() -> dict[str, list]:
         # Prefer querying both entities together; fall back to separate calls.
         try:
+            if hasattr(recorder_history, "get_significant_states"):
+                return call_history_compat(
+                    recorder_history.get_significant_states,
+                    hass,
+                    start_time=start,
+                    end_time=end,
+                    entity_ids=entity_ids,
+                    significant_changes_only=False,
+                    include_start_time_state=True,
+                    no_attributes=True,
+                )
             if hasattr(recorder_history, "state_changes_during_period"):
-                return recorder_history.state_changes_during_period(
+                # Older API: entity_id is a single string — merge below on TypeError.
+                return call_history_compat(
+                    recorder_history.state_changes_during_period,
                     hass,
                     start_time=start,
                     end_time=end,
                     entity_id=entity_ids,
                     include_start_time_state=True,
-                    significant_changes_only=False,
                     no_attributes=True,
                 )
-            return recorder_history.get_significant_states(
-                hass,
-                start_time=start,
-                end_time=end,
-                entity_ids=entity_ids,
-                significant_changes_only=False,
-                include_start_time_state=True,
-                no_attributes=True,
-            )
+            raise AttributeError("No recorder history query helpers available")
         except TypeError:
             merged: dict[str, list] = {}
             for entity_id in entity_ids:
