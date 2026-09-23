@@ -61,6 +61,13 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             "Tankwise sidebar panel failed during domain setup; will retry on entry setup"
         )
 
+    try:
+        from .lovelace import async_register_lovelace_card
+
+        await async_register_lovelace_card(hass)
+    except Exception:  # noqa: BLE001
+        _LOGGER.exception("Tankwise Lovelace history card failed to register")
+
     from .controller import TankwiseController
 
     async def _resolve_controller(call: ServiceCall) -> TankwiseController | None:

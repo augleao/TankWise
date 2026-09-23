@@ -5,7 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.5.3] - 2026-09-20
+## [0.6.0] - 2026-09-23
+
+### Added
+- **Card Lovelace `custom:tankwise-history-card`**: gráficos de nível da caixa d'água e bomba ligada/desligada para qualquer dashboard do Home Assistant. O recurso é registrado automaticamente com a integração (HACS).
+- Editor visual do card (instalação, título, período, abas, intervalo de atualização).
+
+### Changed
+- WebSocket `tankwise/level_history` deixa de exigir admin (somente leitura), para o card funcionar em dashboards.
+- Novo WebSocket `tankwise/card_entries` (lista leve de instalações) para o seletor do card, sem expor a configuração completa.
 
 ### Fixed
 - Aba Logs no celular: o layout em 3 colunas escondia nível, distância e demais detalhes. Agora cada evento mostra data/hora, nome e detalhes em linhas empilhadas.

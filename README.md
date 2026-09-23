@@ -16,6 +16,7 @@ Há duas peças no mesmo repositório:
 - Ciclo trabalho/descanso, botões físicos, LEDs e notificações (opcional)
 - Interface em **inglês ou português**, conforme o idioma do Home Assistant
 - Histórico gráfico de nível/bomba e logs persistentes (7 dias)
+- **Card Lovelace** para colocar os gráficos em qualquer dashboard do HA
 
 ## Como funciona
 
@@ -62,6 +63,25 @@ Instalação só com pasta: copie `custom_components/tankwise` para `config/cust
 ## Painel lateral da integração (opcional)
 
 A integração também registra um painel custom no sidebar. O add-on Ingress é a experiência principal em HA OS.
+
+## Card nos dashboards do Home Assistant
+
+A integração registra automaticamente o card **Tankwise history** (`custom:tankwise-history-card`).
+
+1. Abra qualquer dashboard → **Editar** → **Adicionar cartão**
+2. Procure por **Tankwise history** (ou use YAML abaixo)
+3. Escolha a instalação (se houver mais de uma) e o período
+
+```yaml
+type: custom:tankwise-history-card
+# entry_id: abc123   # opcional se só existir uma instalação
+name: Caixa d'água
+range: 1d            # 1h | 1d | 1w | 1m
+show_range_tabs: true
+refresh_seconds: 60
+```
+
+O card usa o mesmo histórico do painel (nível % + bomba ON/OFF). Após atualizar a integração, recarregue o frontend do HA (Ctrl+F5) se o card não aparecer na lista.
 
 ## Entidades
 

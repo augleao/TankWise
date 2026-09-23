@@ -33,6 +33,25 @@ async def websocket_list(
     )
 
 
+@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/card_entries"})
+@websocket_api.async_response
+async def websocket_card_entries(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """Lightweight installation list for Lovelace cards (no config secrets)."""
+    connection.send_result(
+        msg["id"],
+        {
+            "entries": [
+                {"entry_id": entry.entry_id, "title": entry.title}
+                for entry in api_common.list_entries(hass)
+            ]
+        },
+    )
+
+
 @websocket_api.websocket_command(
     {
         vol.Required("type"): f"{DOMAIN}/get_config",
@@ -203,7 +222,6 @@ async def websocket_logs(
         vol.Optional("range"): vol.In(list(LEVEL_HISTORY_RANGES)),
     }
 )
-@websocket_api.require_admin
 @websocket_api.async_response
 async def websocket_level_history(
     hass: HomeAssistant,
@@ -265,6 +283,7 @@ async def websocket_test_notify(
 def async_register_websockets(hass: HomeAssistant) -> None:
     """Register Tankwise websocket commands."""
     websocket_api.async_register_command(hass, websocket_list)
+    websocket_api.async_register_command(hass, websocket_card_entries)
     websocket_api.async_register_command(hass, websocket_get_config)
     websocket_api.async_register_command(hass, websocket_update_config)
     websocket_api.async_register_command(hass, websocket_set_enabled)
