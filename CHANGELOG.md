@@ -5,7 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.5.3] - 2026-09-20
+## [0.6.1] - 2026-09-23
+
+### Changed
+- Seleção de **Controle da bomba** e **Sensor de distância** agora usa o mesmo modal de busca dos botões/LEDs (seleção única), sem o `<select>` que fechava a cada atualização da página.
+- Ao lado da entidade escolhida, o valor ao vivo é exibido (ex.: `0.320 m`, `ON` / `OFF`).
+- Add-on: na aba de configuração o poll não sobrescreve mais as escolhas locais antes de salvar.
+
+## [0.6.0] - 2026-09-23
+
+### Added
+- **Card Lovelace `custom:tankwise-status-card`**: quadro ao vivo (controlador, demanda, bomba física, distância, nível, fase) — o mesmo bloco do monitor — para qualquer dashboard.
+- **Card Lovelace `custom:tankwise-history-card`**: gráficos de nível da caixa d'água e bomba ligada/desligada. Os recursos são registrados automaticamente com a integração (HACS).
+- Editores visuais dos cards (instalação, título e opções).
+- WebSocket `tankwise/card_status` (status somente leitura) e `tankwise/card_entries` (lista leve de instalações).
+
+### Changed
+- WebSocket `tankwise/level_history` deixa de exigir admin (somente leitura), para o card de histórico funcionar em dashboards.
 
 ### Fixed
 - Aba Logs no celular: o layout em 3 colunas escondia nível, distância e demais detalhes. Agora cada evento mostra data/hora, nome e detalhes em linhas empilhadas.

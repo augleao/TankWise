@@ -220,8 +220,8 @@ def list_notify_targets(hass: HomeAssistant) -> list[dict[str, str]]:
     return list(items.values())
 
 
-def list_picker_entities(hass: HomeAssistant) -> dict[str, list[dict[str, str]]]:
-    buckets: dict[str, list[dict[str, str]]] = {d: [] for d in ENTITY_DOMAINS}
+def list_picker_entities(hass: HomeAssistant) -> dict[str, list[dict[str, Any]]]:
+    buckets: dict[str, list[dict[str, Any]]] = {d: [] for d in ENTITY_DOMAINS}
     for entity_id in sorted(hass.states.async_entity_ids()):
         domain = entity_id.split(".", 1)[0]
         if domain not in buckets:
@@ -230,7 +230,19 @@ def list_picker_entities(hass: HomeAssistant) -> dict[str, list[dict[str, str]]]
         name = (
             (state.attributes.get("friendly_name") if state else None) or entity_id
         )
-        buckets[domain].append({"id": entity_id, "name": f"{name} ({entity_id})"})
+        unit = ""
+        raw_state = ""
+        if state is not None:
+            raw_state = str(state.state)
+            unit = str(state.attributes.get("unit_of_measurement") or "")
+        buckets[domain].append(
+            {
+                "id": entity_id,
+                "name": f"{name} ({entity_id})",
+                "state": raw_state,
+                "unit": unit,
+            }
+        )
     buckets["notify"] = list_notify_targets(hass)
     return buckets
 
