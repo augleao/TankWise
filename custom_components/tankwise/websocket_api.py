@@ -54,6 +54,34 @@ async def websocket_card_entries(
 
 @websocket_api.websocket_command(
     {
+        vol.Required("type"): f"{DOMAIN}/card_status",
+        vol.Optional("entry_id"): str,
+    }
+)
+@websocket_api.async_response
+async def websocket_card_status(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """Read-only live status for the Lovelace status card (no config payload)."""
+    entry = api_common.resolve_entry(hass, msg.get("entry_id"))
+    if entry is None:
+        connection.send_error(msg["id"], "not_found", "Tankwise entry not found")
+        return
+    payload = api_common.entry_payload(hass, entry)
+    connection.send_result(
+        msg["id"],
+        {
+            "entry_id": entry.entry_id,
+            "title": entry.title,
+            "status": payload.get("status") or {},
+        },
+    )
+
+
+@websocket_api.websocket_command(
+    {
         vol.Required("type"): f"{DOMAIN}/get_config",
         vol.Optional("entry_id"): str,
     }
@@ -284,6 +312,7 @@ def async_register_websockets(hass: HomeAssistant) -> None:
     """Register Tankwise websocket commands."""
     websocket_api.async_register_command(hass, websocket_list)
     websocket_api.async_register_command(hass, websocket_card_entries)
+    websocket_api.async_register_command(hass, websocket_card_status)
     websocket_api.async_register_command(hass, websocket_get_config)
     websocket_api.async_register_command(hass, websocket_update_config)
     websocket_api.async_register_command(hass, websocket_set_enabled)

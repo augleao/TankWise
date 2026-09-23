@@ -16,7 +16,7 @@ Há duas peças no mesmo repositório:
 - Ciclo trabalho/descanso, botões físicos, LEDs e notificações (opcional)
 - Interface em **inglês ou português**, conforme o idioma do Home Assistant
 - Histórico gráfico de nível/bomba e logs persistentes (7 dias)
-- **Card Lovelace** para colocar os gráficos em qualquer dashboard do HA
+- **Card Lovelace** para colocar o quadro de status e os gráficos em qualquer dashboard do HA
 
 ## Como funciona
 
@@ -66,22 +66,40 @@ A integração também registra um painel custom no sidebar. O add-on Ingress é
 
 ## Card nos dashboards do Home Assistant
 
-A integração registra automaticamente o card **Tankwise history** (`custom:tankwise-history-card`).
+A integração registra automaticamente dois cards Lovelace:
+
+| Card | Tipo | Conteúdo |
+|------|------|----------|
+| **Tankwise status** | `custom:tankwise-status-card` | Quadro ao vivo (controlador, demanda, bomba, distância, nível, fase) |
+| **Tankwise history** | `custom:tankwise-history-card` | Gráficos de nível e bomba ON/OFF |
 
 1. Abra qualquer dashboard → **Editar** → **Adicionar cartão**
-2. Procure por **Tankwise history** (ou use YAML abaixo)
-3. Escolha a instalação (se houver mais de uma) e o período
+2. Procure por **Tankwise status** ou **Tankwise history**
+3. Escolha a instalação (se houver mais de uma)
+
+### Status (quadro)
+
+```yaml
+type: custom:tankwise-status-card
+# entry_id: abc123
+name: Caixa d'água
+show_title: true
+show_holds: true
+refresh_seconds: 5
+```
+
+### Histórico (gráficos)
 
 ```yaml
 type: custom:tankwise-history-card
-# entry_id: abc123   # opcional se só existir uma instalação
+# entry_id: abc123
 name: Caixa d'água
 range: 1d            # 1h | 1d | 1w | 1m
 show_range_tabs: true
 refresh_seconds: 60
 ```
 
-O card usa o mesmo histórico do painel (nível % + bomba ON/OFF). Após atualizar a integração, recarregue o frontend do HA (Ctrl+F5) se o card não aparecer na lista.
+Após atualizar a integração, recarregue o frontend do HA (Ctrl+F5) se os cards não aparecerem na lista.
 
 ## Entidades
 

@@ -1,4 +1,4 @@
-"""Register the Tankwise Lovelace history card as a dashboard resource."""
+"""Register Tankwise Lovelace cards as dashboard resources."""
 
 from __future__ import annotations
 
@@ -8,16 +8,23 @@ from typing import Any
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.event import async_call_later
 
-from .panel import FRONTEND_PATH, _integration_version, _async_register_static
+from .panel import _async_register_static, _integration_version
 
 _LOGGER = logging.getLogger(__name__)
 
-CARD_FILENAME = "tankwise-history-card.js"
-CARD_URL_BASE = f"/tankwise/frontend/{CARD_FILENAME}"
+# Each card is served from /tankwise/frontend/ and auto-added to Lovelace resources.
+LOVELACE_CARDS: tuple[str, ...] = (
+    "tankwise-history-card.js",
+    "tankwise-status-card.js",
+)
 
 
-def _card_url() -> str:
-    return f"{CARD_URL_BASE}?v={_integration_version()}"
+def _card_url(filename: str) -> str:
+    return f"/tankwise/frontend/{filename}?v={_integration_version()}"
+
+
+def _card_url_base(filename: str) -> str:
+    return f"/tankwise/frontend/{filename}"
 
 
 def _lovelace_data(hass: HomeAssistant) -> Any | None:
@@ -53,19 +60,18 @@ def _resource_version(url: str) -> str | None:
     return str(url).rsplit("?v=", 1)[-1]
 
 
-async def _async_register_storage_resource(resources: Any) -> None:
-    """Create or update the card module in Lovelace storage resources."""
-    # Force-load storage so async_items() is populated.
-    if hasattr(resources, "async_get_info"):
-        await resources.async_get_info()
-
-    url = _card_url()
+async def _async_register_one_storage_resource(
+    resources: Any, filename: str
+) -> None:
+    """Create or update one card module in Lovelace storage resources."""
+    url = _card_url(filename)
+    base = _card_url_base(filename)
     version = _integration_version()
     existing = [
         item
         for item in resources.async_items()
-        if _resource_path(item.get("url", "")).startswith(CARD_URL_BASE)
-        or _resource_path(item.get("url", "")) == CARD_URL_BASE
+        if _resource_path(item.get("url", "")).startswith(base)
+        or _resource_path(item.get("url", "")) == base
     ]
 
     for item in existing:
@@ -94,22 +100,35 @@ async def _async_register_storage_resource(resources: Any) -> None:
     )
 
 
+async def _async_register_storage_resources(resources: Any) -> None:
+    """Create or update all Tankwise card modules in Lovelace storage."""
+    if hasattr(resources, "async_get_info"):
+        await resources.async_get_info()
+    for filename in LOVELACE_CARDS:
+        await _async_register_one_storage_resource(resources, filename)
+
+
 def _register_extra_js(hass: HomeAssistant) -> None:
-    """YAML / fallback: load the module via frontend extra JS."""
-    url = _card_url()
+    """YAML / fallback: load modules via frontend extra JS."""
     try:
         from homeassistant.components.frontend import add_extra_js_url
-
-        add_extra_js_url(hass, url)
-        _LOGGER.info("Registered Tankwise Lovelace card via extra JS: %s", url)
     except Exception:  # noqa: BLE001
-        _LOGGER.exception(
-            "Failed to register Tankwise Lovelace card as extra JS (%s)", url
-        )
+        _LOGGER.exception("frontend.add_extra_js_url unavailable")
+        return
+
+    for filename in LOVELACE_CARDS:
+        url = _card_url(filename)
+        try:
+            add_extra_js_url(hass, url)
+            _LOGGER.info("Registered Tankwise Lovelace card via extra JS: %s", url)
+        except Exception:  # noqa: BLE001
+            _LOGGER.exception(
+                "Failed to register Tankwise Lovelace card as extra JS (%s)", url
+            )
 
 
 async def async_register_lovelace_card(hass: HomeAssistant) -> None:
-    """Serve + register the history card for any Lovelace dashboard."""
+    """Serve + register Tankwise Lovelace cards for any dashboard."""
     from .const import DOMAIN
 
     await _async_register_static(hass)
@@ -118,14 +137,15 @@ async def async_register_lovelace_card(hass: HomeAssistant) -> None:
     if lovelace is None:
         retries = int(hass.data.setdefault(DOMAIN, {}).get("_lovelace_retries", 0))
         if retries >= 12:
+            manuals = ", ".join(_card_url(name) for name in LOVELACE_CARDS)
             _LOGGER.warning(
-                "Lovelace never became ready; add Tankwise card resource manually: %s",
-                _card_url(),
+                "Lovelace never became ready; add Tankwise card resources manually: %s",
+                manuals,
             )
             return
         hass.data[DOMAIN]["_lovelace_retries"] = retries + 1
         _LOGGER.debug(
-            "Lovelace not ready yet; Tankwise card will retry registration shortly"
+            "Lovelace not ready yet; Tankwise cards will retry registration shortly"
         )
 
         async def _retry(_now: Any) -> None:
@@ -146,10 +166,10 @@ async def async_register_lovelace_card(hass: HomeAssistant) -> None:
                 async_call_later(hass, 5, _when_loaded)
                 return
             try:
-                await _async_register_storage_resource(resources)
+                await _async_register_storage_resources(resources)
             except Exception:  # noqa: BLE001
                 _LOGGER.exception(
-                    "Failed to register Tankwise Lovelace card in storage mode"
+                    "Failed to register Tankwise Lovelace cards in storage mode"
                 )
                 _register_extra_js(hass)
 
