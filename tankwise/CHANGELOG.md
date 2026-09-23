@@ -1,3 +1,8 @@
+## 1.2.0
+
+- Controle da bomba e sensor de distância: modal de busca (como botões/LEDs), com valor ao vivo ao lado
+- Poll na aba de configuração não sobrescreve mais escolhas locais antes de salvar
+
 ## 1.1.1
 
 - Logs legíveis no celular (detalhes em linha própria)

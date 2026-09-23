@@ -235,11 +235,27 @@ select[multiple] {
   background: #fbfcfb;
 }
 
+.entity-row-main {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 14px;
+}
+
 .entity-row-name {
   font-size: 0.9rem;
   color: #1c2b24;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.entity-live {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--tw-green-dark);
+  white-space: nowrap;
 }
 
 .entity-remove {

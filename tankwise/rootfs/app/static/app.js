@@ -566,6 +566,69 @@
     return items;
   }
 
+  function formatEntityLive(entityId) {
+    if (!entityId) return t("live_unavailable");
+    let found = null;
+    for (const domain of Object.keys(state.entities || {})) {
+      const hit = (state.entities[domain] || []).find((x) => x.id === entityId);
+      if (hit) {
+        found = hit;
+        break;
+      }
+    }
+    if (
+      !found ||
+      found.state === "unavailable" ||
+      found.state === "unknown" ||
+      found.state == null ||
+      found.state === ""
+    ) {
+      if (entityId === state.config?.distance_entity && state.status?.distance != null) {
+        const n = Number(state.status.distance);
+        return Number.isFinite(n) ? n.toFixed(3) : String(state.status.distance);
+      }
+      if (entityId === state.config?.pump_entity && state.status?.pump_on != null) {
+        return state.status.pump_on ? t("live_on") : t("live_off");
+      }
+      return t("live_unavailable");
+    }
+    const raw = String(found.state);
+    const lower = raw.toLowerCase();
+    if (lower === "on" || lower === "open" || lower === "true") return t("live_on");
+    if (lower === "off" || lower === "closed" || lower === "false") return t("live_off");
+    const num = Number(raw);
+    const unit = found.unit || "";
+    if (Number.isFinite(num)) {
+      const abs = Math.abs(num);
+      const formatted =
+        abs >= 100 ? num.toFixed(0) : abs >= 10 ? num.toFixed(2) : num.toFixed(3);
+      return unit ? `${formatted} ${unit}` : formatted;
+    }
+    return unit ? `${raw} ${unit}` : raw;
+  }
+
+  function selectedSingle(key, domains, emptyText, btnId, chooseKey, changeKey) {
+    const el = $(`${key}_list`);
+    const btn = $(btnId);
+    if (!el || !state.config) return;
+    const id = state.config[key] || "";
+    if (!id) {
+      el.innerHTML = `<div class="chips-empty">${emptyText}</div>`;
+    } else {
+      const byId = new Map(entityItems(domains, [id]).map((i) => [i.id, i]));
+      const item = byId.get(id) || { id, name: id };
+      const live = formatEntityLive(id);
+      el.innerHTML = `<div class="entity-row"><div class="entity-row-main"><span class="entity-row-name" title="${item.id}">${item.name}</span><span class="entity-live">${live}</span></div><button type="button" class="entity-remove" data-key="${key}" data-id="${id}" title="${t("remove")}">×</button></div>`;
+      el.querySelectorAll(".entity-remove").forEach((b) => {
+        b.addEventListener("click", () => {
+          state.config[key] = "";
+          selectedSingle(key, domains, emptyText, btnId, chooseKey, changeKey);
+        });
+      });
+    }
+    if (btn) btn.textContent = id ? t(changeKey) : t(chooseKey);
+  }
+
   function selectedList(key, domains, emptyText) {
     const el = $(`${key}_list`);
     if (!el || !state.config) return;
@@ -592,6 +655,7 @@
   function renderModalList() {
     const modal = state.entityModal;
     if (!modal) return;
+    const single = modal.mode === "single";
     const draft = new Set(modal.draft || []);
     const q = String(modal.query || "").trim().toLowerCase();
     const items = entityItems(modal.domains, Array.from(draft))
@@ -603,32 +667,48 @@
           item.id.toLowerCase().includes(q)
       );
     const list = $("entity-modal-list");
+    const inputType = single ? "radio" : "checkbox";
     list.innerHTML = items.length
       ? items
           .map(
             (item) =>
-              `<label class="entity-opt"><input type="checkbox" value="${item.id}" ${item.selected ? "checked" : ""}><span>${item.name}</span></label>`
+              `<label class="entity-opt"><input type="${inputType}" name="tankwise-entity-pick" value="${item.id}" ${item.selected ? "checked" : ""}><span>${item.name}</span></label>`
           )
           .join("")
       : `<div class="entity-empty">${modal.domains && modal.domains[0] === "notify" ? t("none_found_notify") : t("none_found_entity")}</div>`;
-    list.querySelectorAll('input[type="checkbox"]').forEach((box) => {
+    list.querySelectorAll("input").forEach((box) => {
       box.addEventListener("change", () => {
+        if (single) {
+          state.entityModal.draft = box.checked ? [box.value] : [];
+          renderModalList();
+          return;
+        }
         const set = new Set(state.entityModal.draft || []);
         if (box.checked) set.add(box.value);
         else set.delete(box.value);
         state.entityModal.draft = Array.from(set);
       });
     });
+    const confirm = $("entity-modal-confirm");
+    if (confirm) confirm.textContent = single ? t("select_entity") : t("add_selected");
   }
 
-  function openEntityModal(key, domains, title, hint) {
+  function openEntityModal(key, domains, title, hint, { mode = "multi" } = {}) {
+    let draft = [];
+    if (mode === "single") {
+      const cur = state.config?.[key];
+      draft = cur ? [String(cur)] : [];
+    } else {
+      draft = [...(state.config?.[key] || [])];
+    }
     state.entityModal = {
       key,
       domains,
       title,
       hint,
       query: "",
-      draft: [...(state.config[key] || [])],
+      mode,
+      draft,
     };
     $("entity-modal-title").textContent = title;
     $("entity-modal-hint").textContent = hint;
@@ -649,10 +729,32 @@
 
   function confirmEntityModal() {
     if (!state.entityModal || !state.config) return;
-    const { key, draft, domains } = state.entityModal;
-    state.config[key] = [...draft];
+    const { key, draft, domains, mode } = state.entityModal;
+    if (mode === "single") {
+      state.config[key] = draft && draft.length ? draft[0] : "";
+    } else {
+      state.config[key] = [...draft];
+    }
     closeEntityModal();
-    if (key === "toggle_entities") {
+    if (key === "pump_entity") {
+      selectedSingle(
+        "pump_entity",
+        ["switch", "input_boolean", "light"],
+        t("no_pump_entity"),
+        "btn-choose-pump",
+        "choose_pump",
+        "change_pump"
+      );
+    } else if (key === "distance_entity") {
+      selectedSingle(
+        "distance_entity",
+        ["sensor", "input_number", "number"],
+        t("no_distance_entity"),
+        "btn-choose-distance",
+        "choose_distance",
+        "change_distance"
+      );
+    } else if (key === "toggle_entities") {
       selectedList("toggle_entities", domains, t("no_buttons"));
     } else if (key === "led_entities") {
       selectedList("led_entities", domains, t("no_leds"));
@@ -664,8 +766,22 @@
   function bindConfigFields() {
     if (!state.config) return;
     const c = state.config;
-    fillSelect($("pump_entity"), ["switch", "input_boolean"], c.pump_entity);
-    fillSelect($("distance_entity"), ["sensor", "input_number", "number"], c.distance_entity);
+    selectedSingle(
+      "pump_entity",
+      ["switch", "input_boolean", "light"],
+      t("no_pump_entity"),
+      "btn-choose-pump",
+      "choose_pump",
+      "change_pump"
+    );
+    selectedSingle(
+      "distance_entity",
+      ["sensor", "input_number", "number"],
+      t("no_distance_entity"),
+      "btn-choose-distance",
+      "choose_distance",
+      "change_distance"
+    );
     selectedList("toggle_entities", ["binary_sensor", "input_boolean", "switch"], t("no_buttons"));
     selectedList("led_entities", ["light", "switch", "input_boolean"], t("no_leds"));
     selectedList("notify_services", ["notify"], t("no_notify"));
@@ -717,8 +833,8 @@
     const payload = { ...state.config };
     const get = (id) => $(id);
 
-    payload.pump_entity = get("pump_entity").value || null;
-    payload.distance_entity = get("distance_entity").value || null;
+    payload.pump_entity = state.config.pump_entity || null;
+    payload.distance_entity = state.config.distance_entity || null;
     payload.toggle_entities = Array.isArray(state.config.toggle_entities)
       ? state.config.toggle_entities
       : [];
@@ -774,24 +890,46 @@
     });
   }
 
-  function applyEntry(entry) {
+  function applyEntry(entry, { preserveConfig = false } = {}) {
     state.selected = entry.entry_id;
     state.version = entry.version || state.version || "";
     const ver = $("version");
     if (ver) ver.textContent = state.version ? `v${state.version}` : "";
-    state.config = { ...entry.config };
-    if (!Array.isArray(state.config.notify_services)) {
-      const legacy = state.config.notify_service;
-      state.config.notify_services =
-        typeof legacy === "string" && legacy.trim() ? [legacy.trim()] : [];
+    if (!preserveConfig) {
+      state.config = { ...entry.config };
+      if (!Array.isArray(state.config.notify_services)) {
+        const legacy = state.config.notify_service;
+        state.config.notify_services =
+          typeof legacy === "string" && legacy.trim() ? [legacy.trim()] : [];
+      }
     }
     state.status = entry.status;
     $("empty-state").hidden = true;
     $("app").hidden = false;
     renderMonitor();
-    bindConfigFields();
-    if ($("threshold_mode")) $("threshold_mode").value = thresholdMode();
-    updateThresholdLabels();
+    if (!preserveConfig) {
+      bindConfigFields();
+      if ($("threshold_mode")) $("threshold_mode").value = thresholdMode();
+      updateThresholdLabels();
+    } else if (state.config) {
+      // Refresh live values without wiping in-progress entity picks.
+      selectedSingle(
+        "pump_entity",
+        ["switch", "input_boolean", "light"],
+        t("no_pump_entity"),
+        "btn-choose-pump",
+        "choose_pump",
+        "change_pump"
+      );
+      selectedSingle(
+        "distance_entity",
+        ["sensor", "input_number", "number"],
+        t("no_distance_entity"),
+        "btn-choose-distance",
+        "choose_distance",
+        "change_distance"
+      );
+    }
   }
 
   async function refresh() {
@@ -813,7 +951,9 @@
         return;
       }
       let entry = state.entries.find((e) => e.entry_id === state.selected) || state.entries[0];
-      applyEntry(entry);
+      const preserveConfig =
+        Boolean(state.entityModal) || state.tab === "config" || state.tab === "cycle" || state.tab === "alerts";
+      applyEntry(entry, { preserveConfig });
       if (!list.message) showAlert("");
     } catch (err) {
       showAlert(err.message || String(err), "err");
@@ -1068,6 +1208,30 @@
           ["light", "switch", "input_boolean"],
           t("modal_leds_title"),
           t("modal_leds_hint")
+        )
+      );
+    }
+    const choosePump = $("btn-choose-pump");
+    if (choosePump) {
+      choosePump.addEventListener("click", () =>
+        openEntityModal(
+          "pump_entity",
+          ["switch", "input_boolean", "light"],
+          t("modal_pump_title"),
+          t("modal_pump_hint"),
+          { mode: "single" }
+        )
+      );
+    }
+    const chooseDistance = $("btn-choose-distance");
+    if (chooseDistance) {
+      chooseDistance.addEventListener("click", () =>
+        openEntityModal(
+          "distance_entity",
+          ["sensor", "input_number", "number"],
+          t("modal_distance_title"),
+          t("modal_distance_hint"),
+          { mode: "single" }
         )
       );
     }

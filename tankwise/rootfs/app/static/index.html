@@ -66,13 +66,16 @@
             <h2 data-i18n="entities_title">Entities</h2>
             <p class="desc" data-i18n="entities_addon_desc">Select pump, distance sensor and optionals.</p>
             <div class="grid">
-              <div>
-                <label for="pump_entity" data-i18n="pump_switch">Pump switch</label>
-                <select id="pump_entity" data-key="pump_entity"></select>
+              <div style="grid-column: 1 / -1">
+                <label data-i18n="pump_control">Pump control *</label>
+                <div class="entity-selected" id="pump_entity_list"></div>
+                <button type="button" class="secondary" id="btn-choose-pump" data-i18n="choose_pump">Choose pump</button>
               </div>
-              <div>
-                <label for="distance_entity" data-i18n="distance_sensor">Distance sensor *</label>
-                <select id="distance_entity" data-key="distance_entity"></select>
+              <div style="grid-column: 1 / -1">
+                <label data-i18n="distance_sensor">Distance sensor *</label>
+                <div class="entity-selected" id="distance_entity_list"></div>
+                <button type="button" class="secondary" id="btn-choose-distance" data-i18n="choose_distance">Choose distance sensor</button>
+                <p class="hint" data-i18n="distance_hint">Prefer a meter sensor, not the % one.</p>
               </div>
               <div style="grid-column: 1 / -1">
                 <label data-i18n="buttons_optional">Physical buttons (optional)</label>

@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.1] - 2026-09-23
+
+### Changed
+- Seleção de **Controle da bomba** e **Sensor de distância** agora usa o mesmo modal de busca dos botões/LEDs (seleção única), sem o `<select>` que fechava a cada atualização da página.
+- Ao lado da entidade escolhida, o valor ao vivo é exibido (ex.: `0.320 m`, `ON` / `OFF`).
+- Add-on: na aba de configuração o poll não sobrescreve mais as escolhas locais antes de salvar.
+
 ## [0.6.0] - 2026-09-23
 
 ### Added

@@ -256,7 +256,15 @@ async def api_entities(request: web.Request) -> web.Response:
             if domain not in buckets:
                 continue
             name = item.get("attributes", {}).get("friendly_name") or eid
-            buckets[domain].append({"id": eid, "name": f"{name} ({eid})"})
+            unit = item.get("attributes", {}).get("unit_of_measurement") or ""
+            buckets[domain].append(
+                {
+                    "id": eid,
+                    "name": f"{name} ({eid})",
+                    "state": str(item.get("state") or ""),
+                    "unit": str(unit),
+                }
+            )
         for key in buckets:
             buckets[key].sort(key=lambda x: x["name"])
         # Also list notify.* services for the alerts picker.

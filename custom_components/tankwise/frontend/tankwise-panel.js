@@ -39,6 +39,9 @@ class TankwisePanel extends HTMLElement {
       this._booted = true;
       this._lastLang = lang;
       this._boot();
+    } else if (this._entityModal || this._historyModal) {
+      // Keep modal interaction stable — page refresh was closing entity selects.
+      this._lastLang = lang;
     } else if (this._selected || this._lastLang !== lang) {
       this._lastLang = lang;
       this._render();
@@ -445,20 +448,32 @@ class TankwisePanel extends HTMLElement {
 
   _removeEntity(key, entityId) {
     if (!this._config || !entityId) return;
+    if (key === "pump_entity" || key === "distance_entity") {
+      this._config = { ...this._config, [key]: "" };
+      return;
+    }
     this._config = {
       ...this._config,
       [key]: this._list(key).filter((id) => id !== entityId),
     };
   }
 
-  _openEntityModal(key, domains, title, hint) {
+  _openEntityModal(key, domains, title, hint, { mode = "multi" } = {}) {
+    let draft = [];
+    if (mode === "single") {
+      const current = this._val(key, "");
+      draft = current ? [String(current)] : [];
+    } else {
+      draft = [...this._list(key)];
+    }
     this._entityModal = {
       key,
       domains,
       title,
       hint,
       query: "",
-      draft: [...this._list(key)],
+      mode,
+      draft,
     };
     this._render();
   }
@@ -470,18 +485,75 @@ class TankwisePanel extends HTMLElement {
 
   _confirmEntityModal() {
     if (!this._config || !this._entityModal) return;
-    const { key, draft } = this._entityModal;
-    this._config = { ...this._config, [key]: [...draft] };
+    const { key, draft, mode } = this._entityModal;
+    if (mode === "single") {
+      this._config = {
+        ...this._config,
+        [key]: draft && draft.length ? draft[0] : "",
+      };
+    } else {
+      this._config = { ...this._config, [key]: [...draft] };
+    }
     this._entityModal = null;
     this._render();
   }
 
   _toggleModalDraft(entityId, selected) {
     if (!this._entityModal || !entityId) return;
+    if (this._entityModal.mode === "single") {
+      this._entityModal = {
+        ...this._entityModal,
+        draft: selected ? [entityId] : [],
+      };
+      return;
+    }
     const set = new Set(this._entityModal.draft || []);
     if (selected) set.add(entityId);
     else set.delete(entityId);
     this._entityModal = { ...this._entityModal, draft: Array.from(set) };
+  }
+
+  _formatEntityLive(entityId) {
+    if (!entityId || !this._hass || !this._hass.states) {
+      return this._t("live_unavailable");
+    }
+    const st = this._hass.states[entityId];
+    if (!st || st.state === "unavailable" || st.state === "unknown") {
+      return this._t("live_unavailable");
+    }
+    const raw = String(st.state);
+    const lower = raw.toLowerCase();
+    if (lower === "on" || lower === "open" || lower === "true") return this._t("live_on");
+    if (lower === "off" || lower === "closed" || lower === "false") return this._t("live_off");
+    const num = Number(raw);
+    const unit = (st.attributes && st.attributes.unit_of_measurement) || "";
+    if (Number.isFinite(num)) {
+      const abs = Math.abs(num);
+      const formatted =
+        abs >= 100 ? num.toFixed(0) : abs >= 10 ? num.toFixed(2) : num.toFixed(3);
+      return unit ? `${formatted} ${unit}` : formatted;
+    }
+    return unit ? `${raw} ${unit}` : raw;
+  }
+
+  _entitySingleSelected(key, domains, emptyText) {
+    const id = String(this._val(key, "") || "");
+    if (!id) {
+      return `<div class="entity-selected"><div class="chips-empty">${this._esc(emptyText)}</div></div>`;
+    }
+    const byId = new Map(this._entityItems(domains, [id]).map((item) => [item.id, item]));
+    const item = byId.get(id) || { id, name: id };
+    const live = this._formatEntityLive(id);
+    return `
+      <div class="entity-selected">
+        <div class="entity-row">
+          <div class="entity-row-main">
+            <span class="entity-row-name" title="${this._esc(item.id)}">${this._esc(item.name)}</span>
+            <span class="entity-live" title="${this._esc(item.id)}">${this._esc(live)}</span>
+          </div>
+          <button type="button" class="entity-remove" data-entity-remove="${this._esc(key)}" data-entity-id="${this._esc(item.id)}" title="${this._t("remove")}">×</button>
+        </div>
+      </div>`;
   }
 
   _entitySelectedList(key, domains, emptyText) {
@@ -507,18 +579,20 @@ class TankwisePanel extends HTMLElement {
   _entityModalHtml() {
     const modal = this._entityModal;
     if (!modal) return "";
+    const single = modal.mode === "single";
     const draft = new Set(modal.draft || []);
     const base = this._entityItems(modal.domains, Array.from(draft)).map((item) => ({
       ...item,
       selected: draft.has(item.id),
     }));
     const items = this._filterEntities(base, modal.query);
+    const inputType = single ? "radio" : "checkbox";
     const rows = items.length
       ? items
           .map(
             (item) => `
               <label class="entity-opt">
-                <input type="checkbox" data-modal-toggle value="${this._esc(item.id)}" ${item.selected ? "checked" : ""}>
+                <input type="${inputType}" name="tankwise-entity-pick" data-modal-toggle value="${this._esc(item.id)}" ${item.selected ? "checked" : ""}>
                 <span>${this._esc(item.name)}</span>
               </label>`
           )
@@ -536,7 +610,7 @@ class TankwisePanel extends HTMLElement {
           <div class="entity-list modal-list">${rows}</div>
           <div class="modal-actions">
             <button type="button" class="secondary" data-modal-cancel>${this._t("cancel")}</button>
-            <button type="button" data-modal-confirm>${this._t("add_selected")}</button>
+            <button type="button" data-modal-confirm>${single ? this._t("select_entity") : this._t("add_selected")}</button>
           </div>
         </div>
       </div>
@@ -1092,7 +1166,14 @@ class TankwisePanel extends HTMLElement {
           display: flex; align-items: center; justify-content: space-between; gap: 10px;
           padding: 8px 10px; border: 1px solid var(--tw-border); border-radius: 10px; background: #fbfcfb;
         }
+        .entity-row-main {
+          min-width: 0; flex: 1; display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 14px;
+        }
         .entity-row-name { font-size: 0.9rem; color: #1c2b24; overflow: hidden; text-overflow: ellipsis; }
+        .entity-live {
+          font-size: 0.95rem; font-weight: 700; color: var(--tw-green-dark);
+          white-space: nowrap;
+        }
         .entity-remove {
           flex: 0 0 auto; width: 28px; height: 28px; padding: 0; border-radius: 8px;
           background: #fff; color: #c62828; border: 1px solid #ef9a9a; font-size: 1.15rem; line-height: 1;
@@ -1224,7 +1305,23 @@ class TankwisePanel extends HTMLElement {
     root.querySelectorAll("[data-open-entity-modal]").forEach((el) => {
       el.onclick = () => {
         const key = el.getAttribute("data-open-entity-modal");
-        if (key === "toggle_entities") {
+        if (key === "pump_entity") {
+          this._openEntityModal(
+            "pump_entity",
+            ["switch", "light", "input_boolean"],
+            this._t("modal_pump_title"),
+            this._t("modal_pump_hint"),
+            { mode: "single" }
+          );
+        } else if (key === "distance_entity") {
+          this._openEntityModal(
+            "distance_entity",
+            ["sensor", "input_number", "number"],
+            this._t("modal_distance_title"),
+            this._t("modal_distance_hint"),
+            { mode: "single" }
+          );
+        } else if (key === "toggle_entities") {
           this._openEntityModal(
             "toggle_entities",
             ["binary_sensor", "input_boolean", "switch"],
@@ -1290,7 +1387,11 @@ class TankwisePanel extends HTMLElement {
     }
     root.querySelectorAll("[data-modal-toggle]").forEach((el) => {
       el.onchange = () => {
-        this._toggleModalDraft(el.value, el.checked);
+        if (this._entityModal && this._entityModal.mode === "single") {
+          this._toggleModalDraft(el.value, true);
+        } else {
+          this._toggleModalDraft(el.value, el.checked);
+        }
         this._render();
       };
     });
@@ -1449,22 +1550,30 @@ class TankwisePanel extends HTMLElement {
             <h2>${this._t("entities_title")}</h2>
             <div class="desc">${this._t("entities_desc")}</div>
             <div class="grid">
-              <div>
+              <div style="grid-column: 1 / -1">
                 <label>${this._t("pump_control")}</label>
-                <select data-key="pump_entity">${this._options(
+                ${this._entitySingleSelected(
+                  "pump_entity",
                   ["switch", "light", "input_boolean"],
-                  c.pump_entity
-                )}</select>
+                  this._t("no_pump_entity")
+                )}
+                <button type="button" class="secondary add-btn" data-open-entity-modal="pump_entity">${
+                  c.pump_entity ? this._t("change_pump") : this._t("choose_pump")
+                }</button>
               </div>
-              <div>
+              <div style="grid-column: 1 / -1">
                 <label>${this._t("distance_sensor")}</label>
-                <select data-key="distance_entity">${this._options(
+                ${this._entitySingleSelected(
+                  "distance_entity",
                   ["sensor", "input_number", "number"],
-                  c.distance_entity
-                )}</select>
+                  this._t("no_distance_entity")
+                )}
+                <button type="button" class="secondary add-btn" data-open-entity-modal="distance_entity">${
+                  c.distance_entity ? this._t("change_distance") : this._t("choose_distance")
+                }</button>
                 <div class="hint">${this._t("distance_hint")}</div>
               </div>
-                            <div style="grid-column: 1 / -1">
+              <div style="grid-column: 1 / -1">
                 <label>${this._t("physical_buttons")}</label>
                 ${this._entitySelectedList(
                   "toggle_entities",
