@@ -1649,6 +1649,11 @@ class TankwisePanel extends HTMLElement {
                 <label>${this._t("hold_off_s")}</label>
                 <input type="number" step="1" min="0" data-key="off_hold_seconds" value="${this._esc(this._val("off_hold_seconds", 120))}">
               </div>
+              <div>
+                <label>${this._t("min_auto_switch_s")}</label>
+                <input type="number" step="1" min="0" data-key="min_auto_switch_seconds" value="${this._esc(this._val("min_auto_switch_seconds", 300))}">
+                <div class="hint">${this._t("min_auto_switch_hint")}</div>
+              </div>
             </div>
             <div class="check">
               <input type="checkbox" data-key="expose_percentage" ${this._bool("expose_percentage", true) ? "checked" : ""}>

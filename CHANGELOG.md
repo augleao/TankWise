@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.2] - 2026-09-23
+
+### Fixed
+- **Short-cycling da bomba**: o reconciliador desligava a bomba imediatamente ao cruzar o limiar de “cheio”, sem esperar o `off_hold` — ruído do ultrassom gerava ON/OFF em milissegundos/segundos (visível no histórico do Sonoff).
+- Eco de estado do switch (`pump_changed` logo após um comando) deixava de rearmar outro comando por 3s.
+
+### Added
+- **Intervalo mínimo entre ligar↔desligar automático** (`min_auto_switch_seconds`, padrão **300s**). Demanda manual (UI, serviço, botão físico) ignora esta proteção.
+- Campo configurável no painel / add-on (aba Ciclo / histerese).
+
 ## [0.6.1] - 2026-09-23
 
 ### Changed

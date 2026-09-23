@@ -30,6 +30,7 @@ from .const import (
     CONF_OFF_THRESHOLD,
     CONF_ON_HOLD_SECONDS,
     CONF_ON_THRESHOLD,
+    CONF_MIN_AUTO_SWITCH_SECONDS,
     CONF_THRESHOLD_MODE,
     DEFAULT_THRESHOLD_MODE,
     THRESHOLD_MODE_DISTANCE,
@@ -76,6 +77,7 @@ UPDATE_SCHEMA = vol.Schema(
         vol.Optional(CONF_OFF_THRESHOLD): vol.Coerce(float),
         vol.Optional(CONF_ON_HOLD_SECONDS): vol.Coerce(int),
         vol.Optional(CONF_OFF_HOLD_SECONDS): vol.Coerce(int),
+        vol.Optional(CONF_MIN_AUTO_SWITCH_SECONDS): vol.Coerce(int),
         vol.Optional(CONF_RECONCILE_INTERVAL): vol.Coerce(int),
         vol.Optional(CONF_RECONCILE_RETRIES): vol.Coerce(int),
         vol.Optional(CONF_RECONCILE_ENABLED): cv.boolean,
@@ -160,6 +162,8 @@ def entry_payload(hass: HomeAssistant, entry: ConfigEntry) -> dict[str, Any]:
                         "off_hold_seconds",
                         "on_hold_elapsed",
                         "off_hold_elapsed",
+                        "min_auto_switch_seconds",
+                        "auto_switch_cooldown_remaining",
                     )
                     if snap.attributes
                 },

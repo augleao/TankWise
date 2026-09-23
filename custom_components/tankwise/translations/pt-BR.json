@@ -42,6 +42,7 @@
           "off_threshold": "Limiar para desligar",
           "on_hold_seconds": "Tempo de confirmação para ligar",
           "off_hold_seconds": "Tempo de confirmação para desligar",
+          "min_auto_switch_seconds": "Intervalo mínimo automático ligar/desligar",
           "reconcile_interval": "Intervalo de reconciliação",
           "work_minutes": "Minutos de trabalho",
           "rest_minutes": "Minutos de descanso",

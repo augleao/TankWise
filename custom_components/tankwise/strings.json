@@ -42,6 +42,7 @@
           "off_threshold": "Turn-off distance threshold",
           "on_hold_seconds": "Turn-on hold time",
           "off_hold_seconds": "Turn-off hold time",
+          "min_auto_switch_seconds": "Minimum automatic ON/OFF interval",
           "reconcile_interval": "Reconcile interval",
           "work_minutes": "Work minutes",
           "rest_minutes": "Rest minutes",

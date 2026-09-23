@@ -1,3 +1,7 @@
+## 1.2.1
+
+- Campo **intervalo mínimo automático ligar↔desligar** (`min_auto_switch_seconds`)
+
 ## 1.2.0
 
 - Controle da bomba e sensor de distância: modal de busca (como botões/LEDs), com valor ao vivo ao lado

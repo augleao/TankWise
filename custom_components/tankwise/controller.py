@@ -47,6 +47,7 @@ from .const import (
     CONF_OFF_THRESHOLD,
     CONF_ON_HOLD_SECONDS,
     CONF_ON_THRESHOLD,
+    CONF_MIN_AUTO_SWITCH_SECONDS,
     CONF_THRESHOLD_MODE,
     DEFAULT_THRESHOLD_MODE,
     THRESHOLD_MODE_PERCENT,
@@ -65,6 +66,7 @@ from .const import (
     DEFAULT_OFF_THRESHOLD,
     DEFAULT_ON_HOLD_SECONDS,
     DEFAULT_ON_THRESHOLD,
+    DEFAULT_MIN_AUTO_SWITCH_SECONDS,
     DEFAULT_RECONCILE_INTERVAL,
     DEFAULT_RECONCILE_RETRIES,
     DEFAULT_RECONCILE_ENABLED,
@@ -81,12 +83,14 @@ from .const import (
     PHASE_IDLE,
     PHASE_RESTING,
     PHASE_WORKING,
+    PUMP_COMMAND_ECHO_GRACE_SECONDS,
     PUMP_RELATED_LOG_EVENTS,
     STORAGE_KEY,
     STORAGE_VERSION,
 )
 from .helpers import (
     distance_to_percent,
+    is_manual_control_reason,
     is_off_condition,
     is_on_condition,
     is_on_state,
@@ -156,6 +160,10 @@ class TankwiseController:
         self._work_started_at: datetime | None = None
         self._failsafe_triggered: bool = False
 
+        # Last physical pump command (for short-cycle protection + echo grace).
+        self._last_pump_command_at: datetime | None = None
+        self._last_pump_target: bool | None = None
+
         self._last_toggle_states: dict[str, str | None] = {}
 
     # ------------------------------------------------------------------ config
@@ -199,6 +207,14 @@ class TankwiseController:
     @property
     def off_hold(self) -> int:
         return int(self.config.get(CONF_OFF_HOLD_SECONDS, DEFAULT_OFF_HOLD_SECONDS))
+
+    @property
+    def min_auto_switch_seconds(self) -> int:
+        return int(
+            self.config.get(
+                CONF_MIN_AUTO_SWITCH_SECONDS, DEFAULT_MIN_AUTO_SWITCH_SECONDS
+            )
+        )
 
     @property
     def reconcile_interval(self) -> int:
@@ -480,6 +496,15 @@ class TankwiseController:
             on_hold_elapsed = round((now - self._on_condition_since).total_seconds(), 1)
         if self._off_condition_since is not None:
             off_hold_elapsed = round((now - self._off_condition_since).total_seconds(), 1)
+        cooldown_remaining = None
+        if (
+            self._last_pump_command_at is not None
+            and self.min_auto_switch_seconds > 0
+        ):
+            elapsed = (now - self._last_pump_command_at).total_seconds()
+            left = self.min_auto_switch_seconds - elapsed
+            if left > 0:
+                cooldown_remaining = round(left, 1)
         return TankwiseSnapshot(
             desired_on=self.desired_on,
             enabled=self.enabled,
@@ -506,6 +531,9 @@ class TankwiseController:
                 "off_hold_seconds": self.off_hold,
                 "on_hold_elapsed": on_hold_elapsed,
                 "off_hold_elapsed": off_hold_elapsed,
+                "min_auto_switch_seconds": self.min_auto_switch_seconds,
+                "auto_switch_cooldown_remaining": cooldown_remaining,
+                "last_pump_target": self._last_pump_target,
             },
         )
 
@@ -683,6 +711,17 @@ class TankwiseController:
             return
 
         if entity_id == self.pump_entity:
+            # Ignore Sonoff/state echoes right after we commanded the pump —
+            # those flicker ON/OFF within milliseconds and would re-trigger
+            # reconcile in a short-cycle loop.
+            if self._last_pump_command_at is not None:
+                echo_age = (
+                    dt_util.utcnow() - self._last_pump_command_at
+                ).total_seconds()
+                if echo_age < PUMP_COMMAND_ECHO_GRACE_SECONDS:
+                    await self._async_sync_leds()
+                    self._notify_listeners()
+                    return
             await self.async_reconcile(reason="pump_changed")
             await self._async_sync_leds()
             self._notify_listeners()
@@ -874,66 +913,50 @@ class TankwiseController:
                 )
 
     def _pump_allowed(self, distance: float | None) -> bool:
+        """Return whether the physical pump may run given current demand/cycle.
+
+        Full-tank stop is handled exclusively by hysteresis (with off_hold), not
+        by an instantaneous distance check here — otherwise ultrasonic noise near
+        the off threshold short-cycles the pump ON/OFF within seconds.
+        """
         if not self.enabled:
             return False
         if not self.desired_on:
             return False
-        if distance is not None:
-            percent = distance_to_percent(
-                distance, self.full_distance, self.empty_distance
-            )
-            if is_off_condition(
-                mode=self.threshold_mode,
-                distance=distance,
-                percent=percent,
-                off_threshold=self.off_threshold,
-            ):
-                return False
         if self.cyclic_mode and self.cycle_phase == PHASE_RESTING:
             return False
         return True
+
+    def _auto_switch_blocked(self, target_on: bool, *, reason: str) -> tuple[bool, float]:
+        """Return (blocked, seconds_remaining) for opposite automatic pump cmds."""
+        if is_manual_control_reason(reason):
+            return False, 0.0
+        if self.min_auto_switch_seconds <= 0:
+            return False, 0.0
+        if self._last_pump_command_at is None or self._last_pump_target is None:
+            return False, 0.0
+        if target_on == self._last_pump_target:
+            # Same direction (e.g. re-assert ON after a glitch) is allowed.
+            return False, 0.0
+        elapsed = (dt_util.utcnow() - self._last_pump_command_at).total_seconds()
+        remaining = self.min_auto_switch_seconds - elapsed
+        if remaining > 0:
+            return True, remaining
+        return False, 0.0
 
     # ------------------------------------------------------------------ reconciler
     async def async_reconcile(self, *, reason: str = "manual") -> None:
         """Ensure the physical pump matches desired demand + safety."""
         distance = parse_float(self.hass.states.get(self.distance_entity))
-
-        # Full-tank safety: force desired OFF and pump OFF when full enough.
         percent = (
             distance_to_percent(distance, self.full_distance, self.empty_distance)
             if distance is not None
             else None
         )
-        if distance is not None and is_off_condition(
-            mode=self.threshold_mode,
-            distance=distance,
-            percent=percent,
-            off_threshold=self.off_threshold,
-        ):
-            if self.desired_on:
-                self.desired_on = False
-                self.reason = "safety_full_level"
-                self.cycle_phase = PHASE_IDLE
-                self._phase_started_at = None
-                self._work_started_at = None
-                self._log(
-                    "safety_full_level",
-                    distance=distance,
-                    percent=percent,
-                )
-                await self._async_persist()
-                self._notify_listeners()
-            pump_on = is_on_state(self.hass.states.get(self.pump_entity))
-            if pump_on:
-                self._log(
-                    "pump_command",
-                    service="turn_off",
-                    target_on=False,
-                    reason="safety_full_level",
-                    distance=distance,
-                    percent=percent,
-                )
-                await self._async_call_pump("turn_off")
+
+        # Full-tank demand OFF is owned by hysteresis (off_hold). Do NOT force
+        # an immediate pump OFF here on a single noisy reading — that was the
+        # main short-cycle cause in activity logs.
 
         await self._async_evaluate_cycle()
         allowed = self._pump_allowed(distance)
@@ -963,6 +986,31 @@ class TankwiseController:
             )
             return
 
+        blocked, remaining = self._auto_switch_blocked(target_on, reason=reason)
+        if blocked:
+            self._log(
+                "pump_command_blocked_cooldown",
+                target_on=target_on,
+                pump_was=pump_on,
+                reason=reason,
+                remaining_s=round(remaining, 1),
+                min_s=self.min_auto_switch_seconds,
+                distance=distance,
+                percent=percent,
+            )
+            self.hass.bus.async_fire(
+                EVENT_RECONCILE,
+                {
+                    "entry_id": self.entry_id,
+                    "matched": False,
+                    "target_on": target_on,
+                    "reason": f"cooldown:{reason}",
+                    "remaining_s": round(remaining, 1),
+                },
+            )
+            self._notify_listeners()
+            return
+
         service = "turn_on" if target_on else "turn_off"
         self._log(
             "pump_command",
@@ -975,6 +1023,8 @@ class TankwiseController:
         )
         success = await self._async_call_pump(service)
         if success:
+            self._last_pump_command_at = dt_util.utcnow()
+            self._last_pump_target = target_on
             # Verify
             pump_on = is_on_state(self.hass.states.get(self.pump_entity))
             success = pump_on == target_on

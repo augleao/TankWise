@@ -129,6 +129,23 @@ def is_off_condition(
     return distance < off_threshold
 
 
+def is_manual_control_reason(reason: str) -> bool:
+    """Return True when the reconcile/demand reason comes from manual control.
+
+    Manual UI, services and physical toggles bypass the automatic pump
+    short-cycle cooldown. Automatic hysteresis/cycle/reconcile reasons do not.
+    """
+    text = (reason or "").strip()
+    if text.startswith("demand:") or text.startswith("enabled:"):
+        text = text.split(":", 1)[1]
+    return (
+        text.startswith("ui_")
+        or text.startswith("physical_toggle")
+        or text.startswith("service_")
+        or text in ("manual", "reconcile_now")
+    )
+
+
 def downsample_points(
     points: list[dict[str, Any]],
     max_points: int = 240,

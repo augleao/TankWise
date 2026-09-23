@@ -22,6 +22,7 @@ THRESHOLD_MODE_DISTANCE: Final = "distance"
 THRESHOLD_MODE_PERCENT: Final = "percent"
 CONF_ON_HOLD_SECONDS: Final = "on_hold_seconds"
 CONF_OFF_HOLD_SECONDS: Final = "off_hold_seconds"
+CONF_MIN_AUTO_SWITCH_SECONDS: Final = "min_auto_switch_seconds"
 
 CONF_RECONCILE_INTERVAL: Final = "reconcile_interval"
 CONF_RECONCILE_RETRIES: Final = "reconcile_retries"
@@ -47,6 +48,11 @@ DEFAULT_ON_THRESHOLD: Final = 101.0
 DEFAULT_OFF_THRESHOLD: Final = 84.0
 DEFAULT_ON_HOLD_SECONDS: Final = 120
 DEFAULT_OFF_HOLD_SECONDS: Final = 120
+# Minimum gap between opposite automatic pump commands (ON↔OFF).
+# Manual demand changes bypass this. Protects the well pump from short-cycling.
+DEFAULT_MIN_AUTO_SWITCH_SECONDS: Final = 300
+# Ignore pump state echoes right after we issue a command (Sonoff flicker).
+PUMP_COMMAND_ECHO_GRACE_SECONDS: Final = 3
 DEFAULT_RECONCILE_INTERVAL: Final = 120  # seconds (2 minutes)
 DEFAULT_RECONCILE_RETRIES: Final = 3
 DEFAULT_RECONCILE_ENABLED: Final = True
@@ -107,6 +113,7 @@ PUMP_RELATED_LOG_EVENTS: Final = frozenset(
         "off_condition_armed",
         "off_condition_cleared",
         "pump_command",
+        "pump_command_blocked_cooldown",
         "pump_reconcile_ok",
         "pump_reconcile_failed",
         "safety_full_level",

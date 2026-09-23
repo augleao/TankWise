@@ -213,6 +213,9 @@
       off_above_short: "Turn off above (%)",
       hold_on_label: "On hold (s)",
       hold_off_label: "Off hold (s)",
+      min_auto_switch_s: "Min. auto ON↔OFF interval (s)",
+      min_auto_switch_hint:
+        "Minimum gap between opposite automatic pump commands. Manual demand bypasses this. Default 300s (5 min).",
       retries: "Command retries",
       cyclic_mode: "Cyclic mode (work / rest)",
       work_minutes: "Work minutes",
@@ -443,6 +446,9 @@
       off_above_short: "Desligar acima de (%)",
       hold_on_label: "Hold para ligar (s)",
       hold_off_label: "Hold para desligar (s)",
+      min_auto_switch_s: "Intervalo mín. auto ligar↔desligar (s)",
+      min_auto_switch_hint:
+        "Tempo mínimo entre comandos automáticos opostos da bomba. Demanda manual ignora esta proteção. Padrão 300s (5 min).",
       retries: "Tentativas de comando",
       cyclic_mode: "Modo cíclico (trabalho / descanso)",
       work_minutes: "Minutos trabalhando",

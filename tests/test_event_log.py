@@ -15,6 +15,7 @@ from const import LOG_RETENTION_DAYS, PUMP_RELATED_LOG_EVENTS  # noqa: E402
 
 def test_pump_related_events_cover_commands():
     assert "pump_command" in PUMP_RELATED_LOG_EVENTS
+    assert "pump_command_blocked_cooldown" in PUMP_RELATED_LOG_EVENTS
     assert "demand_changed" in PUMP_RELATED_LOG_EVENTS
     assert "safety_full_level" in PUMP_RELATED_LOG_EVENTS
 
