@@ -132,18 +132,34 @@ def is_off_condition(
 def is_manual_control_reason(reason: str) -> bool:
     """Return True when the reconcile/demand reason comes from manual control.
 
-    Manual UI, services and physical toggles bypass the automatic pump
-    short-cycle cooldown. Automatic hysteresis/cycle/reconcile reasons do not.
+    Manual UI / panel / HTTP / services / physical toggles bypass the automatic
+    pump short-cycle cooldown. Only hysteresis, cycle, distance and reconcile
+    recovery reasons are treated as automatic.
     """
     text = (reason or "").strip()
     if text.startswith("demand:") or text.startswith("enabled:"):
         text = text.split(":", 1)[1]
-    return (
-        text.startswith("ui_")
-        or text.startswith("physical_toggle")
-        or text.startswith("service_")
-        or text in ("manual", "reconcile_now")
+    if text.startswith("cooldown:"):
+        return False
+    # Explicit automatic sources — everything else is manual (panel_demand,
+    # http_demand, ui_demand, physical_toggle, service_*, …).
+    auto_exact = {
+        "pump_changed",
+        "distance_changed",
+        "interval",
+        "boot_recovery",
+    }
+    if text in auto_exact:
+        return False
+    auto_prefixes = (
+        "hysteresis_",
+        "boot_",
+        "safety_",
+        "cyclic_",
     )
+    if any(text.startswith(prefix) for prefix in auto_prefixes):
+        return False
+    return True
 
 
 def downsample_points(

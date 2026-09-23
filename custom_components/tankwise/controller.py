@@ -586,6 +586,11 @@ class TankwiseController:
         self.reason = reason
         if changed:
             self._log("demand_changed", desired_on=desired_on, reason=reason)
+            # Manual demand must not be immediately reversed by an already-armed
+            # hysteresis hold (e.g. user turns OFF while on_condition was held).
+            if is_manual_control_reason(reason):
+                self._on_condition_since = None
+                self._off_condition_since = None
 
         if not desired_on:
             self.cycle_phase = PHASE_IDLE
