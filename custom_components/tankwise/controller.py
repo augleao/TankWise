@@ -89,6 +89,7 @@ from .const import (
     STORAGE_VERSION,
 )
 from .helpers import (
+    distance_thresholds_consistent,
     distance_to_percent,
     is_manual_control_reason,
     is_off_condition,
@@ -163,6 +164,7 @@ class TankwiseController:
         # Last physical pump command (for short-cycle protection + echo grace).
         self._last_pump_command_at: datetime | None = None
         self._last_pump_target: bool | None = None
+        self._threshold_misconfig_logged: bool = False
 
         self._last_toggle_states: dict[str, str | None] = {}
 
@@ -748,6 +750,44 @@ class TankwiseController:
         percent = distance_to_percent(
             distance, self.full_distance, self.empty_distance
         )
+
+        # Guard against m↔cm (or other) unit mixups in distance mode.
+        # Example from the field: distance=26.2 with on_threshold=0.283 → ON
+        # is always true even at 99% full.
+        if self.threshold_mode != THRESHOLD_MODE_PERCENT and not distance_thresholds_consistent(
+            self.full_distance,
+            self.empty_distance,
+            self.on_threshold,
+            self.off_threshold,
+        ):
+            self._on_condition_since = None
+            self._off_condition_since = None
+            if not self._threshold_misconfig_logged:
+                self._threshold_misconfig_logged = True
+                self._log(
+                    "threshold_misconfigured",
+                    distance=distance,
+                    percent=percent,
+                    full=self.full_distance,
+                    empty=self.empty_distance,
+                    on_threshold=self.on_threshold,
+                    off_threshold=self.off_threshold,
+                    mode=self.threshold_mode,
+                )
+                _LOGGER.error(
+                    "Tankwise distance thresholds are outside calibration "
+                    "(full=%s off=%s on=%s empty=%s). Auto ON/OFF suspended "
+                    "until thresholds use the same unit as the sensor "
+                    "(expected: full < off < on < empty). Prefer percent mode.",
+                    self.full_distance,
+                    self.off_threshold,
+                    self.on_threshold,
+                    self.empty_distance,
+                )
+            await self._async_level_notifications(percent)
+            return
+
+        self._threshold_misconfig_logged = False
 
         on_cond = is_on_condition(
             mode=self.threshold_mode,

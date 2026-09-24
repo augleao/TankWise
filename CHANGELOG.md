@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.4] - 2026-09-24
+
+### Fixed
+- **Acionamento indevido com caixa cheia**: em modo distância, limiar `0.283` com sensor em `~26` (cm) fazia `distance > on_threshold` ficar **sempre verdadeiro**, ligando a bomba mesmo a ~99%.
+- Automação suspende ON/OFF se os limiares não estiverem na faixa da calibração (`full < off < on < empty`) e registra `threshold_misconfigured`.
+- Salvamento no painel rejeita essa configuração inconsistente.
+- Defaults do config flow / UI alinhados à unidade em cm (82/120), não mais 0.25/0.47 m.
+
 ## [0.6.3] - 2026-09-23
 
 ### Fixed

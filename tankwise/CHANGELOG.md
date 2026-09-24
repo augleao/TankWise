@@ -1,3 +1,7 @@
+## 1.2.2
+
+- Defaults de calibração/limiares em cm (alinhados à integração 0.6.4)
+
 ## 1.2.1
 
 - Campo **intervalo mínimo automático ligar↔desligar** (`min_auto_switch_seconds`)

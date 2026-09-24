@@ -129,6 +129,32 @@ def is_off_condition(
     return distance < off_threshold
 
 
+def distance_thresholds_consistent(
+    full_distance: float,
+    empty_distance: float,
+    on_threshold: float,
+    off_threshold: float,
+) -> bool:
+    """Return True when distance thresholds share the calibration unit/range.
+
+    Expected order (ultrasonic, emptier = farther):
+      full_distance < off_threshold < on_threshold < empty_distance
+
+    Catches classic m↔cm mixups (e.g. sensor=26cm, threshold=0.283m) that
+    would make ON always true and OFF never true.
+    """
+    try:
+        full = float(full_distance)
+        empty = float(empty_distance)
+        on_th = float(on_threshold)
+        off_th = float(off_threshold)
+    except (TypeError, ValueError):
+        return False
+    if empty <= full:
+        return False
+    return full < off_th < on_th < empty
+
+
 def is_manual_control_reason(reason: str) -> bool:
     """Return True when the reconcile/demand reason comes from manual control.
 

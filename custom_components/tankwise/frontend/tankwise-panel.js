@@ -622,8 +622,8 @@ class TankwisePanel extends HTMLElement {
   }
 
   _distanceToPercent(distance) {
-    const full = this._num("full_distance", 0.25);
-    const empty = this._num("empty_distance", 0.47);
+    const full = this._num("full_distance", 82);
+    const empty = this._num("empty_distance", 120);
     if (empty <= full) return null;
     const pct = ((empty - Number(distance)) / (empty - full)) * 100;
     if (!Number.isFinite(pct)) return null;
@@ -631,8 +631,8 @@ class TankwisePanel extends HTMLElement {
   }
 
   _percentToDistance(percent) {
-    const full = this._num("full_distance", 0.25);
-    const empty = this._num("empty_distance", 0.47);
+    const full = this._num("full_distance", 82);
+    const empty = this._num("empty_distance", 120);
     if (empty <= full) return null;
     const pct = Math.max(0, Math.min(100, Number(percent)));
     if (!Number.isFinite(pct)) return null;
@@ -643,8 +643,8 @@ class TankwisePanel extends HTMLElement {
     if (!this._config) return;
     const cur = this._thresholdMode();
     if (mode === cur) return;
-    let on = this._num("on_threshold", mode === "percent" ? 30 : 0.4);
-    let off = this._num("off_threshold", mode === "percent" ? 95 : 0.28);
+    let on = this._num("on_threshold", mode === "percent" ? 30 : 101);
+    let off = this._num("off_threshold", mode === "percent" ? 95 : 84);
     if (mode === "percent" && cur === "distance") {
       const onP = this._distanceToPercent(on);
       const offP = this._distanceToPercent(off);
@@ -658,12 +658,12 @@ class TankwisePanel extends HTMLElement {
     } else if (mode === "distance" && cur === "percent") {
       const onD = this._percentToDistance(on);
       const offD = this._percentToDistance(off);
-      on = onD == null ? 0.4 : Number(onD.toFixed(3));
-      off = offD == null ? 0.28 : Number(offD.toFixed(3));
+      on = onD == null ? 101 : Number(onD.toFixed(3));
+      off = offD == null ? 84 : Number(offD.toFixed(3));
       // Ensure distance ordering on > off
       if (on <= off) {
-        const full = this._num("full_distance", 0.25);
-        const empty = this._num("empty_distance", 0.47);
+        const full = this._num("full_distance", 82);
+        const empty = this._num("empty_distance", 120);
         const span = Math.max(empty - full, 0.001);
         on = Number((full + span * 0.7).toFixed(3));
         off = Number((full + span * 0.05).toFixed(3));
@@ -685,8 +685,8 @@ class TankwisePanel extends HTMLElement {
     }
     // Derive from distance + calibration when percent missing
     const dist = st.distance;
-    const full = this._num("full_distance", 0.25);
-    const empty = this._num("empty_distance", 0.47);
+    const full = this._num("full_distance", 82);
+    const empty = this._num("empty_distance", 120);
     if (dist === null || dist === undefined || empty <= full) return null;
     const pct = ((empty - Number(dist)) / (empty - full)) * 100;
     if (!Number.isFinite(pct)) return null;
@@ -1602,11 +1602,11 @@ class TankwisePanel extends HTMLElement {
             <div class="grid">
               <div>
                 <label>${this._t("full_distance")}</label>
-                <input type="number" step="any" data-key="full_distance" value="${this._esc(this._val("full_distance", 0.25))}">
+                <input type="number" step="any" data-key="full_distance" value="${this._esc(this._val("full_distance", 82))}">
               </div>
               <div>
                 <label>${this._t("empty_distance")}</label>
-                <input type="number" step="any" data-key="empty_distance" value="${this._esc(this._val("empty_distance", 0.47))}">
+                <input type="number" step="any" data-key="empty_distance" value="${this._esc(this._val("empty_distance", 120))}">
               </div>
               <div style="grid-column: 1 / -1">
                 <label>${this._t("threshold_unit")}</label>
@@ -1632,12 +1632,12 @@ class TankwisePanel extends HTMLElement {
                   : `
               <div>
                 <label>${this._t("on_threshold_distance")}</label>
-                <input type="number" step="any" data-key="on_threshold" value="${this._esc(this._val("on_threshold", 0.4))}">
+                <input type="number" step="any" data-key="on_threshold" value="${this._esc(this._val("on_threshold", 101))}">
                 <div class="hint">${this._t("on_threshold_distance_hint")}</div>
               </div>
               <div>
                 <label>${this._t("off_threshold_distance")}</label>
-                <input type="number" step="any" data-key="off_threshold" value="${this._esc(this._val("off_threshold", 0.28))}">
+                <input type="number" step="any" data-key="off_threshold" value="${this._esc(this._val("off_threshold", 84))}">
                 <div class="hint">${this._t("off_threshold_distance_hint")}</div>
               </div>`
               }

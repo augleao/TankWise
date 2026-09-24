@@ -53,3 +53,15 @@ def test_user_level_at_82_percent_with_percent_thresholds():
     assert not is_off_condition(mode="percent", distance=0.290, percent=pct, off_threshold=95)
     # If user wants pump on at 82%, set on_threshold around 85
     assert is_on_condition(mode="percent", distance=0.290, percent=pct, on_threshold=85)
+
+
+def test_distance_thresholds_reject_meter_cm_mixup():
+    from helpers import distance_thresholds_consistent
+
+    # Field bug: calibration/sensor in cm (~26), thresholds left in meters (0.28)
+    assert not distance_thresholds_consistent(25.0, 50.0, 0.283, 0.26)
+    # Correct same-unit band
+    assert distance_thresholds_consistent(25.0, 50.0, 40.0, 27.0)
+    assert not distance_thresholds_consistent(25.0, 50.0, 27.0, 40.0)  # inverted
+    assert not distance_thresholds_consistent(50.0, 25.0, 40.0, 27.0)  # bad calib
+

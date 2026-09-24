@@ -117,6 +117,7 @@ PUMP_RELATED_LOG_EVENTS: Final = frozenset(
         "pump_reconcile_ok",
         "pump_reconcile_failed",
         "safety_full_level",
+        "threshold_misconfigured",
         "cyclic_failsafe",
         "boot_recovery",
     }

@@ -44,7 +44,11 @@ from .const import (
     CONF_WORK_MINUTES,
     DOMAIN,
 )
-from .helpers import merge_entry_config, with_normalized_notify
+from .helpers import (
+    distance_thresholds_consistent,
+    merge_entry_config,
+    with_normalized_notify,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -279,6 +283,15 @@ async def apply_config_updates(
             raise vol.Invalid(
                 "In distance mode, on threshold must be greater than off "
                 "(ligar > desligar: higher distance = emptier)"
+            )
+        full = float(merged[CONF_FULL_DISTANCE])
+        empty = float(merged[CONF_EMPTY_DISTANCE])
+        if not distance_thresholds_consistent(full, empty, on_th, off_th):
+            raise vol.Invalid(
+                "Distance thresholds must use the same unit as calibration "
+                f"(expected {full} < off < on < {empty}). "
+                "Example: if the sensor reads ~26, do not use 0.28. "
+                "Prefer percent (%) mode to avoid unit mixups."
             )
 
     new_data = dict(entry.data)

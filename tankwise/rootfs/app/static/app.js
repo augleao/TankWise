@@ -42,16 +42,16 @@
   }
 
   function distanceToPercent(distance) {
-    const full = Number(state.config?.full_distance ?? 0.25);
-    const empty = Number(state.config?.empty_distance ?? 0.47);
+    const full = Number(state.config?.full_distance ?? 82);
+    const empty = Number(state.config?.empty_distance ?? 120);
     if (!(empty > full)) return null;
     const pct = ((empty - Number(distance)) / (empty - full)) * 100;
     return Number.isFinite(pct) ? Math.max(0, Math.min(100, pct)) : null;
   }
 
   function percentToDistance(percent) {
-    const full = Number(state.config?.full_distance ?? 0.25);
-    const empty = Number(state.config?.empty_distance ?? 0.47);
+    const full = Number(state.config?.full_distance ?? 82);
+    const empty = Number(state.config?.empty_distance ?? 120);
     if (!(empty > full)) return null;
     const pct = Math.max(0, Math.min(100, Number(percent)));
     return Number.isFinite(pct) ? empty - (pct / 100) * (empty - full) : null;
@@ -94,11 +94,11 @@
       on = Number(on.toFixed(1));
       off = Number(off.toFixed(1));
     } else if (mode === "distance" && cur === "percent") {
-      on = percentToDistance(on) ?? 0.4;
-      off = percentToDistance(off) ?? 0.28;
+      on = percentToDistance(on) ?? 101;
+      off = percentToDistance(off) ?? 84;
       if (on <= off) {
-        const full = Number(state.config.full_distance ?? 0.25);
-        const empty = Number(state.config.empty_distance ?? 0.47);
+        const full = Number(state.config.full_distance ?? 82);
+        const empty = Number(state.config.empty_distance ?? 120);
         const span = Math.max(empty - full, 0.001);
         on = Number((full + span * 0.7).toFixed(3));
         off = Number((full + span * 0.05).toFixed(3));
