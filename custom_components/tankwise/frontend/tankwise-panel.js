@@ -1015,14 +1015,18 @@ class TankwisePanel extends HTMLElement {
         <p class="desc">${this._t("sensor_step1_desc")}</p>
         <div class="sensor-bom">
           <div class="sensor-bom-item">
-            <div class="sensor-bom-photo sensor-bom-photo-placeholder" aria-hidden="true">5V</div>
+            <div class="sensor-bom-photo">
+              <img src="${imgBase}/material-psu.png" alt="${this._esc(this._t("sensor_psu_alt"))}" />
+            </div>
             <div>
               <strong>${this._t("sensor_bom_psu_title")}</strong>
               <p>${this._t("sensor_bom_psu_desc")}</p>
             </div>
           </div>
           <div class="sensor-bom-item">
-            <div class="sensor-bom-photo sensor-bom-photo-placeholder" aria-hidden="true">USB</div>
+            <div class="sensor-bom-photo">
+              <img src="${imgBase}/material-usb-cable.png" alt="${this._esc(this._t("sensor_cable_alt"))}" />
+            </div>
             <div>
               <strong>${this._t("sensor_bom_cable_title")}</strong>
               <p>${this._t("sensor_bom_cable_desc")}</p>
