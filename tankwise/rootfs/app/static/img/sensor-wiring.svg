@@ -33,9 +33,9 @@
       <rect x="14" y="152" width="78" height="22" rx="5" fill="#16382c"/>
       <text x="53" y="167" text-anchor="middle">GND</text>
       <rect x="14" y="184" width="78" height="22" rx="5" fill="#16382c"/>
-      <text x="53" y="199" text-anchor="middle">D1 GPIO5</text>
+      <text x="53" y="199" text-anchor="middle">D3 GPIO0</text>
       <rect x="14" y="216" width="78" height="22" rx="5" fill="#16382c"/>
-      <text x="53" y="231" text-anchor="middle">D2 GPIO4</text>
+      <text x="53" y="231" text-anchor="middle">D4 GPIO2</text>
     </g>
   </g>
 
@@ -70,7 +70,7 @@
   <g transform="translate(48,368)" font-family="Segoe UI, system-ui, sans-serif" font-size="12">
     <rect width="14" height="14" rx="3" fill="#c62828"/><text x="22" y="12" fill="#31463c">VIN/5V -&gt; VCC</text>
     <rect x="150" width="14" height="14" rx="3" fill="#263238"/><text x="172" y="12" fill="#31463c">GND -&gt; GND</text>
-    <rect x="290" width="14" height="14" rx="3" fill="#1565c0"/><text x="312" y="12" fill="#31463c">D1 -&gt; Trig</text>
-    <rect x="420" width="14" height="14" rx="3" fill="#2e7d32"/><text x="442" y="12" fill="#31463c">D2 -&gt; Echo</text>
+    <rect x="290" width="14" height="14" rx="3" fill="#1565c0"/><text x="312" y="12" fill="#31463c">D3/GPIO0 -&gt; Trig</text>
+    <rect x="450" width="14" height="14" rx="3" fill="#2e7d32"/><text x="472" y="12" fill="#31463c">D4/GPIO2 -&gt; Echo</text>
   </g>
 </svg>

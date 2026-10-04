@@ -35,8 +35,8 @@
         "Wiring diagram: NodeMCU ESP8266 to JSN-SR04T or AJ-SR04M",
       sensor_wire_vcc: "VIN / 5V → VCC (JSN-SR04T needs 5V; AJ-SR04M accepts 3.3–5V)",
       sensor_wire_gnd: "GND → GND",
-      sensor_wire_trig: "D1 (GPIO5) → Trig",
-      sensor_wire_echo: "D2 (GPIO4) → Echo",
+      sensor_wire_trig: "D3 (GPIO0) → Trig (inverted in firmware)",
+      sensor_wire_echo: "D4 (GPIO2) → Echo",
       sensor_mount_tip:
         "Mount the sensor above the water, facing straight down, clear of walls and foam.",
       sensor_step2_title: "2. Install firmware (USB)",
@@ -298,8 +298,8 @@
         "Diagrama de conexões: NodeMCU ESP8266 com JSN-SR04T ou AJ-SR04M",
       sensor_wire_vcc: "VIN / 5V → VCC (JSN-SR04T precisa de 5V; AJ-SR04M aceita 3,3–5V)",
       sensor_wire_gnd: "GND → GND",
-      sensor_wire_trig: "D1 (GPIO5) → Trig",
-      sensor_wire_echo: "D2 (GPIO4) → Echo",
+      sensor_wire_trig: "D3 (GPIO0) → Trig (invertido no firmware)",
+      sensor_wire_echo: "D4 (GPIO2) → Echo",
       sensor_mount_tip:
         "Instale o sensor acima da água, apontando para baixo, longe de paredes e espuma.",
       sensor_step2_title: "2. Instalar firmware (USB)",
