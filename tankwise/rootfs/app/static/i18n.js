@@ -242,6 +242,7 @@
       err: "Error",
       add: "Add",
       physical_pump_short: "Pump",
+      bmc_label: "Buy Me a Coffee",
     },
     pt: {
       brand_sub: "Controle amigável da bomba artesiana e da caixa d'água.",
@@ -475,6 +476,7 @@
       err: "Erro",
       add: "Adicionar",
       physical_pump_short: "Bomba",
+      bmc_label: "Me pague um café",
     },
   };
 
