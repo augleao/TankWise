@@ -21,7 +21,7 @@ jobs:
           # Topics must be set on the GitHub repo UI (API token cannot edit them).
           # For HACS default-store submission, set topics first, then remove this ignore
           # so the action passes with zero ignores (HACS requirement).
-          ignore: topics
+
 
   hassfest:
     name: Hassfest
