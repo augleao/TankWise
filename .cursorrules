@@ -1,0 +1,41 @@
+# TankWise — regras do agente (Cursor)
+
+Este repositório é uma integração Home Assistant distribuída via **HACS**.
+Qualquer alteração de versão dispara notificação de update para usuários que
+já instalaram o add-on/integração. Por isso o versionamento é **manual e
+explícito**.
+
+## Versionamento — comando expresso obrigatório
+
+**NUNCA** altere a versão do projeto sem um comando **expresso e inequívoco**
+do mantenedor (ex.: "suba a versão para 0.6.5", "faça o bump de patch",
+"prepare o release 0.7.0", "publique a versão").
+
+Sem esse comando, é **proibido**:
+
+1. Alterar o campo `"version"` em `custom_components/tankwise/manifest.json`
+2. Alterar `version` em `tankwise/config.yaml` (add-on)
+3. Adicionar seção de release em `CHANGELOG.md` (ex.: `## [x.y.z] - data`)
+4. Criar ou mover tags Git de release (`v0.x.y`, etc.)
+5. Criar GitHub Releases
+6. Qualquer outro arquivo ou metadado que HACS / Home Assistant use como
+   sinal de nova versão
+
+### O que continua permitido sem bump de versão
+
+- Correções de código, UI, painel, Lovelace, testes, docs, CI, assets
+- Commits, PRs e merges de funcionalidade **sem** mudar versão
+- Atualizar o CHANGELOG só quando o mantenedor pedir o release (na mesma
+  alteração do bump), ou quando o mantenedor pedir explicitamente texto no
+  changelog sem publicar versão
+
+### Fluxo esperado
+
+1. Desenvolver e testar alterações **sem** bump
+2. Mantenedor testa exaustivamente
+3. Mantenedor dá o comando expresso de versionamento
+4. Só então: bump em `manifest.json` (+ add-on se aplicável), entrada no
+   `CHANGELOG.md`, tag/release se pedido
+
+Se houver dúvida se a mensagem do usuário é um pedido de release: **não
+versionar** e perguntar.
