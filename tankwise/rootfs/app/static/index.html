@@ -270,10 +270,65 @@
           <span class="sensor-step active" data-sensor-step-indicator="1">1</span>
           <span class="sensor-step-line"></span>
           <span class="sensor-step" data-sensor-step-indicator="2">2</span>
+          <span class="sensor-step-line"></span>
+          <span class="sensor-step" data-sensor-step-indicator="3">3</span>
         </div>
         <div class="sensor-body" id="sensor-step-1">
-          <h4 data-i18n="sensor_step1_title">1. Physical wiring</h4>
+          <h4 data-i18n="sensor_step1_title">1. Materials list</h4>
           <p class="desc" data-i18n="sensor_step1_desc">
+            Gather these parts before wiring and flashing the level sensor.
+          </p>
+          <div class="sensor-bom">
+            <div class="sensor-bom-item">
+              <div class="sensor-bom-photo sensor-bom-photo-placeholder" aria-hidden="true">5V</div>
+              <div>
+                <strong data-i18n="sensor_bom_psu_title">USB 5V power supply</strong>
+                <p data-i18n="sensor_bom_psu_desc">Wall adapter or USB power bank to power the NodeMCU after install.</p>
+              </div>
+            </div>
+            <div class="sensor-bom-item">
+              <div class="sensor-bom-photo sensor-bom-photo-placeholder" aria-hidden="true">USB</div>
+              <div>
+                <strong data-i18n="sensor_bom_cable_title">Micro-USB data cable</strong>
+                <p data-i18n="sensor_bom_cable_desc">Must carry data (not charge-only) to flash the NodeMCU from the computer.</p>
+              </div>
+            </div>
+            <div class="sensor-bom-item">
+              <div class="sensor-bom-photo">
+                <img
+                  src="static/img/material-nodemcu.png"
+                  alt="NodeMCU ESP8266 board"
+                  data-i18n-alt="sensor_nodemcu_alt"
+                />
+              </div>
+              <div>
+                <strong data-i18n="sensor_bom_board_title">NodeMCU ESP8266 board</strong>
+                <p data-i18n="sensor_bom_board_desc">NodeMCU v2 / ESP8266MOD (this firmware is for ESP8266, not ESP32).</p>
+              </div>
+            </div>
+            <div class="sensor-bom-item">
+              <div class="sensor-bom-photo">
+                <img
+                  src="static/img/material-ultrasonic.png"
+                  alt="Waterproof ultrasonic sensor kit"
+                  data-i18n-alt="sensor_ultrasonic_alt"
+                />
+              </div>
+              <div>
+                <strong data-i18n="sensor_bom_sensor_title">Waterproof ultrasonic sensor kit</strong>
+                <p data-i18n="sensor_bom_sensor_desc">JSN-SR04T or AJ-SR04M set: control board + waterproof probe with cable.</p>
+              </div>
+            </div>
+          </div>
+          <div class="sensor-flash-actions">
+            <button type="button" class="secondary" id="sensor-bom-download" data-i18n="sensor_bom_download">
+              Download list (.txt)
+            </button>
+          </div>
+        </div>
+        <div class="sensor-body hidden" id="sensor-step-2">
+          <h4 data-i18n="sensor_step2_title">2. Physical wiring</h4>
+          <p class="desc" data-i18n="sensor_step2_desc">
             Wire the waterproof ultrasonic sensor to a NodeMCU ESP8266 (this firmware is for ESP8266, not ESP32).
           </p>
           <div class="sensor-wiring">
@@ -291,9 +346,9 @@
             <li data-i18n="sensor_mount_tip">Mount the sensor above the water, facing down, away from walls and foam.</li>
           </ul>
         </div>
-        <div class="sensor-body hidden" id="sensor-step-2">
-          <h4 data-i18n="sensor_step2_title">2. Install firmware (USB)</h4>
-          <p class="desc" data-i18n="sensor_step2_desc">
+        <div class="sensor-body hidden" id="sensor-step-3">
+          <h4 data-i18n="sensor_step3_title">3. Install firmware (USB)</h4>
+          <p class="desc" data-i18n="sensor_step3_desc">
             Easiest path: open the TankWise installer page (Chrome/Edge), connect the NodeMCU by USB and flash in one click.
           </p>
           <div class="sensor-flash-actions">
@@ -335,7 +390,7 @@
         <div class="modal-actions sensor-modal-actions">
           <button type="button" class="secondary" id="sensor-modal-back" hidden data-i18n="sensor_back">Back</button>
           <button type="button" class="secondary" id="sensor-modal-cancel" data-i18n="close">Close</button>
-          <button type="button" id="sensor-modal-next" data-i18n="sensor_next">Next: firmware</button>
+          <button type="button" id="sensor-modal-next" data-i18n="sensor_next">Next: wiring</button>
         </div>
       </div>
     </div>

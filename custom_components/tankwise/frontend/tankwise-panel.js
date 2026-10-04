@@ -30,7 +30,7 @@ class TankwisePanel extends HTMLElement {
     this._logs = [];
     this._entityModal = null; // { key, domains, title, hint, query, draft: string[] }
     this._historyModal = null; // { range, points, loading, message, available }
-    this._sensorModal = null; // { step: 1|2 }
+    this._sensorModal = null; // { step: 1|2|3 }
   }
 
   set hass(hass) {
@@ -972,22 +972,91 @@ class TankwisePanel extends HTMLElement {
 
   _setSensorModalStep(step) {
     if (!this._sensorModal) return;
-    this._sensorModal = { step: step === 2 ? 2 : 1 };
+    const n = Math.min(3, Math.max(1, Number(step) || 1));
+    this._sensorModal = { step: n };
     this._render();
+  }
+
+  _downloadSensorBomTxt() {
+    const lines = [
+      this._t("sensor_bom_txt_header"),
+      "",
+      `1. ${this._t("sensor_bom_psu_title")}`,
+      `2. ${this._t("sensor_bom_cable_title")}`,
+      `3. ${this._t("sensor_bom_board_title")}`,
+      `4. ${this._t("sensor_bom_sensor_title")}`,
+      "",
+      `- ${this._t("sensor_bom_psu_desc")}`,
+      `- ${this._t("sensor_bom_cable_desc")}`,
+      `- ${this._t("sensor_bom_board_desc")}`,
+      `- ${this._t("sensor_bom_sensor_desc")}`,
+      "",
+    ];
+    const blob = new Blob([lines.join("\n")], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = this._t("sensor_bom_txt_filename");
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
   }
 
   _sensorModalHtml() {
     const modal = this._sensorModal;
     if (!modal) return "";
-    const step = modal.step === 2 ? 2 : 1;
+    const step = Math.min(3, Math.max(1, Number(modal.step) || 1));
     const firmwareBase = "/tankwise/frontend/firmware";
-    const wiringSrc = "/tankwise/frontend/img/sensor-wiring.svg";
+    const imgBase = "/tankwise/frontend/img";
     const step1 = `
       <div class="sensor-body">
         <h4>${this._t("sensor_step1_title")}</h4>
         <p class="desc">${this._t("sensor_step1_desc")}</p>
+        <div class="sensor-bom">
+          <div class="sensor-bom-item">
+            <div class="sensor-bom-photo sensor-bom-photo-placeholder" aria-hidden="true">5V</div>
+            <div>
+              <strong>${this._t("sensor_bom_psu_title")}</strong>
+              <p>${this._t("sensor_bom_psu_desc")}</p>
+            </div>
+          </div>
+          <div class="sensor-bom-item">
+            <div class="sensor-bom-photo sensor-bom-photo-placeholder" aria-hidden="true">USB</div>
+            <div>
+              <strong>${this._t("sensor_bom_cable_title")}</strong>
+              <p>${this._t("sensor_bom_cable_desc")}</p>
+            </div>
+          </div>
+          <div class="sensor-bom-item">
+            <div class="sensor-bom-photo">
+              <img src="${imgBase}/material-nodemcu.png" alt="${this._esc(this._t("sensor_nodemcu_alt"))}" />
+            </div>
+            <div>
+              <strong>${this._t("sensor_bom_board_title")}</strong>
+              <p>${this._t("sensor_bom_board_desc")}</p>
+            </div>
+          </div>
+          <div class="sensor-bom-item">
+            <div class="sensor-bom-photo">
+              <img src="${imgBase}/material-ultrasonic.png" alt="${this._esc(this._t("sensor_ultrasonic_alt"))}" />
+            </div>
+            <div>
+              <strong>${this._t("sensor_bom_sensor_title")}</strong>
+              <p>${this._t("sensor_bom_sensor_desc")}</p>
+            </div>
+          </div>
+        </div>
+        <div class="sensor-flash-actions">
+          <button type="button" class="secondary" data-sensor-bom-download>${this._t("sensor_bom_download")}</button>
+        </div>
+      </div>`;
+    const step2 = `
+      <div class="sensor-body">
+        <h4>${this._t("sensor_step2_title")}</h4>
+        <p class="desc">${this._t("sensor_step2_desc")}</p>
         <div class="sensor-wiring">
-          <img src="${wiringSrc}" alt="${this._esc(this._t("sensor_wiring_alt"))}" />
+          <img src="${imgBase}/sensor-wiring.svg" alt="${this._esc(this._t("sensor_wiring_alt"))}" />
         </div>
         <ul class="sensor-list">
           <li>${this._t("sensor_wire_vcc")}</li>
@@ -997,10 +1066,10 @@ class TankwisePanel extends HTMLElement {
           <li>${this._t("sensor_mount_tip")}</li>
         </ul>
       </div>`;
-    const step2 = `
+    const step3 = `
       <div class="sensor-body">
-        <h4>${this._t("sensor_step2_title")}</h4>
-        <p class="desc">${this._t("sensor_step2_desc")}</p>
+        <h4>${this._t("sensor_step3_title")}</h4>
+        <p class="desc">${this._t("sensor_step3_desc")}</p>
         <div class="sensor-flash-actions">
           <a class="button-link" href="${firmwareBase}/install.html" target="_blank" rel="noopener noreferrer">${this._t("sensor_open_installer")}</a>
           <a class="button-link secondary" href="${firmwareBase}/sensor-firmware.bin" download="sensor-firmware.bin">${this._t("sensor_download_bin")}</a>
@@ -1014,6 +1083,7 @@ class TankwisePanel extends HTMLElement {
         </ol>
         <p class="hint">${this._t("sensor_flash_hint")}</p>
       </div>`;
+    const body = step === 1 ? step1 : step === 2 ? step2 : step3;
     return `
       <div class="modal-backdrop" data-sensor-backdrop>
         <div class="modal sensor-modal" role="dialog" aria-modal="true" aria-label="${this._t("sensor_modal_title")}">
@@ -1025,18 +1095,22 @@ class TankwisePanel extends HTMLElement {
             <span class="sensor-step ${step === 1 ? "active" : ""}">1</span>
             <span class="sensor-step-line"></span>
             <span class="sensor-step ${step === 2 ? "active" : ""}">2</span>
+            <span class="sensor-step-line"></span>
+            <span class="sensor-step ${step === 3 ? "active" : ""}">3</span>
           </div>
-          ${step === 1 ? step1 : step2}
+          ${body}
           <div class="modal-actions sensor-modal-actions">
             ${
-              step === 2
+              step > 1
                 ? `<button type="button" class="secondary" data-sensor-back>${this._t("sensor_back")}</button>`
                 : ""
             }
             <button type="button" class="secondary" data-sensor-close>${this._t("close")}</button>
             ${
-              step === 1
-                ? `<button type="button" data-sensor-next>${this._t("sensor_next")}</button>`
+              step < 3
+                ? `<button type="button" data-sensor-next>${
+                    step === 1 ? this._t("sensor_next") : this._t("sensor_next_firmware")
+                  }</button>`
                 : ""
             }
           </div>
@@ -1214,6 +1288,24 @@ class TankwisePanel extends HTMLElement {
           background: #f7faf8; overflow: hidden;
         }
         .sensor-wiring img { display: block; width: 100%; height: auto; }
+        .sensor-bom { display: flex; flex-direction: column; gap: 12px; margin: 10px 0 4px; }
+        .sensor-bom-item {
+          display: grid; grid-template-columns: 96px 1fr; gap: 12px; align-items: center;
+        }
+        .sensor-bom-item strong { display: block; color: var(--tw-green-dark); font-size: 0.95rem; }
+        .sensor-bom-item p { margin: 4px 0 0; color: var(--tw-muted); font-size: 0.85rem; line-height: 1.4; }
+        .sensor-bom-photo {
+          width: 96px; height: 80px; border-radius: 10px; border: 1px solid var(--tw-border);
+          background: #f7faf8; overflow: hidden; display: flex; align-items: center; justify-content: center;
+        }
+        .sensor-bom-photo img { width: 100%; height: 100%; object-fit: contain; display: block; }
+        .sensor-bom-photo-placeholder {
+          color: var(--tw-green-dark); font-weight: 800; font-size: 0.95rem; letter-spacing: 0.04em;
+        }
+        @media (max-width: 520px) {
+          .sensor-bom-item { grid-template-columns: 72px 1fr; }
+          .sensor-bom-photo { width: 72px; height: 64px; }
+        }
         .sensor-list {
           margin: 0; padding-left: 1.2rem; color: #31463c; font-size: 0.9rem; line-height: 1.45;
         }
@@ -1411,10 +1503,13 @@ class TankwisePanel extends HTMLElement {
       el.onclick = () => this._closeSensorModal();
     });
     root.querySelectorAll("[data-sensor-next]").forEach((el) => {
-      el.onclick = () => this._setSensorModalStep(2);
+      el.onclick = () => this._setSensorModalStep((this._sensorModal?.step || 1) + 1);
     });
     root.querySelectorAll("[data-sensor-back]").forEach((el) => {
-      el.onclick = () => this._setSensorModalStep(1);
+      el.onclick = () => this._setSensorModalStep((this._sensorModal?.step || 1) - 1);
+    });
+    root.querySelectorAll("[data-sensor-bom-download]").forEach((el) => {
+      el.onclick = () => this._downloadSensorBomTxt();
     });
     const sensorBackdrop = root.querySelector("[data-sensor-backdrop]");
     if (sensorBackdrop) {

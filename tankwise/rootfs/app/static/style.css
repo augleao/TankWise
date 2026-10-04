@@ -384,6 +384,69 @@ select[multiple] {
   height: auto;
 }
 
+.sensor-bom {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 10px 0 4px;
+}
+
+.sensor-bom-item {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: 12px;
+  align-items: center;
+}
+
+.sensor-bom-item strong {
+  display: block;
+  color: var(--tw-green-dark);
+  font-size: 0.95rem;
+}
+
+.sensor-bom-item p {
+  margin: 4px 0 0;
+  color: var(--tw-muted);
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.sensor-bom-photo {
+  width: 96px;
+  height: 80px;
+  border-radius: 10px;
+  border: 1px solid var(--tw-border);
+  background: #f7faf8;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sensor-bom-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.sensor-bom-photo-placeholder {
+  color: var(--tw-green-dark);
+  font-weight: 800;
+  font-size: 0.95rem;
+  letter-spacing: 0.04em;
+}
+
+@media (max-width: 520px) {
+  .sensor-bom-item {
+    grid-template-columns: 72px 1fr;
+  }
+  .sensor-bom-photo {
+    width: 72px;
+    height: 64px;
+  }
+}
+
 .sensor-list {
   margin: 0;
   padding-left: 1.2rem;
