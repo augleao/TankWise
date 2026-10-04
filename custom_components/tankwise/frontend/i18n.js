@@ -24,8 +24,37 @@
       tab_monitor: "Monitor",
       tab_config: "Entities & calibration",
       tab_cycle: "Timing",
+      tab_sensor_level: "Level sensor",
       tab_alerts: "Alerts",
       tab_logs: "Logs",
+      sensor_modal_title: "Level sensor setup",
+      sensor_step1_title: "1. Physical wiring",
+      sensor_step1_desc:
+        "Wire the waterproof ultrasonic sensor to a NodeMCU ESP8266. This firmware targets ESP8266 (nodemcuv2), not ESP32.",
+      sensor_wiring_alt:
+        "Wiring diagram: NodeMCU ESP8266 to JSN-SR04T or AJ-SR04M",
+      sensor_wire_vcc: "VIN / 5V → VCC (JSN-SR04T needs 5V; AJ-SR04M accepts 3.3–5V)",
+      sensor_wire_gnd: "GND → GND",
+      sensor_wire_trig: "D1 (GPIO5) → Trig",
+      sensor_wire_echo: "D2 (GPIO4) → Echo",
+      sensor_mount_tip:
+        "Mount the sensor above the water, facing straight down, clear of walls and foam.",
+      sensor_step2_title: "2. Install firmware (USB)",
+      sensor_step2_desc:
+        "Easiest path: open the TankWise installer (Chrome/Edge), plug in the NodeMCU by USB and flash in one click. Fallback: download the .bin and use ESPHome Web.",
+      sensor_open_installer: "Install via USB (recommended)",
+      sensor_download_bin: "Download .bin",
+      sensor_open_esphome_web: "Open ESPHome Web",
+      sensor_flash_step_1: "Connect the NodeMCU with a data USB cable",
+      sensor_flash_step_2: "In the installer, click Install and pick the serial port",
+      sensor_flash_step_3:
+        "Or on web.esphome.io: Connect → Install → choose the downloaded .bin",
+      sensor_flash_step_4:
+        "After reboot, join the sensor Wi‑Fi hotspot and set your home network",
+      sensor_flash_hint:
+        "Web Serial needs Chrome or Edge in a normal browser tab (some iframes block it). Prefer the installer page opened above.",
+      sensor_next: "Next: firmware",
+      sensor_back: "Back",
       live_status: "Live status",
       live_status_desc:
         "Tank volume, pump state and manual demand control (environment variable).",
@@ -260,8 +289,37 @@
       tab_monitor: "Monitor",
       tab_config: "Entidades & calibração",
       tab_cycle: "Temporização",
+      tab_sensor_level: "Sensor de Nível",
       tab_alerts: "Alertas",
       tab_logs: "Logs",
+      sensor_modal_title: "Montagem do sensor de nível",
+      sensor_step1_title: "1. Conexões físicas",
+      sensor_step1_desc:
+        "Ligue o sensor ultrassônico à prova d'água em um NodeMCU ESP8266. Este firmware é para ESP8266 (nodemcuv2), não ESP32.",
+      sensor_wiring_alt:
+        "Diagrama de conexões: NodeMCU ESP8266 com JSN-SR04T ou AJ-SR04M",
+      sensor_wire_vcc: "VIN / 5V → VCC (JSN-SR04T precisa de 5V; AJ-SR04M aceita 3,3–5V)",
+      sensor_wire_gnd: "GND → GND",
+      sensor_wire_trig: "D1 (GPIO5) → Trig",
+      sensor_wire_echo: "D2 (GPIO4) → Echo",
+      sensor_mount_tip:
+        "Instale o sensor acima da água, apontando para baixo, longe de paredes e espuma.",
+      sensor_step2_title: "2. Instalar firmware (USB)",
+      sensor_step2_desc:
+        "Caminho mais fácil: abra o instalador TankWise (Chrome/Edge), conecte o NodeMCU por USB e grave com um clique. Alternativa: baixe o .bin e use o ESPHome Web.",
+      sensor_open_installer: "Instalar via USB (recomendado)",
+      sensor_download_bin: "Baixar .bin",
+      sensor_open_esphome_web: "Abrir ESPHome Web",
+      sensor_flash_step_1: "Conecte o NodeMCU com um cabo USB com dados",
+      sensor_flash_step_2: "No instalador, clique em Instalar e escolha a porta serial",
+      sensor_flash_step_3:
+        "Ou em web.esphome.io: Connect → Install → escolha o .bin baixado",
+      sensor_flash_step_4:
+        "Após reiniciar, entre no hotspot Wi‑Fi do sensor e configure a rede de casa",
+      sensor_flash_hint:
+        "Web Serial funciona no Chrome ou Edge em uma aba normal (alguns iframes bloqueiam). Prefira a página do instalador aberta acima.",
+      sensor_next: "Próximo: firmware",
+      sensor_back: "Voltar",
       live_status: "Status ao vivo",
       live_status_desc:
         "Volume da caixa, estado da bomba e controle manual da demanda (variável de ambiente).",
@@ -524,6 +582,10 @@
     scope.querySelectorAll("[data-i18n-aria]").forEach((el) => {
       const key = el.getAttribute("data-i18n-aria");
       if (key) el.setAttribute("aria-label", t(lang, key));
+    });
+    scope.querySelectorAll("[data-i18n-alt]").forEach((el) => {
+      const key = el.getAttribute("data-i18n-alt");
+      if (key) el.setAttribute("alt", t(lang, key));
     });
   }
 

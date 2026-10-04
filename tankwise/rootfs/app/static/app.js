@@ -11,6 +11,7 @@
     pollTimer: null,
     entityModal: null,
     historyModal: null, // { range, points, loading, message }
+    sensorModalStep: 1,
     lang: "en",
   };
 
@@ -374,6 +375,39 @@
     body.innerHTML = `${
       hm.message ? `<div class="hint" style="margin-bottom:10px">${hm.message}</div>` : ""
     }${levelChartSvg(hm.points || [], hm.pump_points || [], hm.range)}`;
+  }
+
+  function setSensorModalStep(step) {
+    state.sensorModalStep = step === 2 ? 2 : 1;
+    const step1 = $("sensor-step-1");
+    const step2 = $("sensor-step-2");
+    if (step1) step1.classList.toggle("hidden", state.sensorModalStep !== 1);
+    if (step2) step2.classList.toggle("hidden", state.sensorModalStep !== 2);
+    document.querySelectorAll("[data-sensor-step-indicator]").forEach((el) => {
+      const n = Number(el.getAttribute("data-sensor-step-indicator"));
+      el.classList.toggle("active", n === state.sensorModalStep);
+    });
+    const back = $("sensor-modal-back");
+    const next = $("sensor-modal-next");
+    if (back) back.hidden = state.sensorModalStep === 1;
+    if (next) {
+      next.hidden = state.sensorModalStep === 2;
+      next.textContent = t("sensor_next");
+    }
+  }
+
+  function openSensorModal() {
+    const modal = $("sensor-modal");
+    if (!modal) return;
+    modal.classList.remove("hidden");
+    setSensorModalStep(1);
+  }
+
+  function closeSensorModal() {
+    const modal = $("sensor-modal");
+    if (!modal) return;
+    modal.classList.add("hidden");
+    state.sensorModalStep = 1;
   }
 
   async function openHistoryModal(range = "1d") {
@@ -1138,6 +1172,26 @@
     document.querySelectorAll(".tab[data-tab]").forEach((el) => {
       el.addEventListener("click", () => switchTab(el.dataset.tab));
     });
+    const btnSensor = $("btn-sensor-level");
+    if (btnSensor) btnSensor.addEventListener("click", () => openSensorModal());
+    const sensorModal = $("sensor-modal");
+    if (sensorModal) {
+      sensorModal.addEventListener("click", (ev) => {
+        if (ev.target === sensorModal) closeSensorModal();
+      });
+    }
+    const sensorClose = $("sensor-modal-close");
+    if (sensorClose) sensorClose.addEventListener("click", () => closeSensorModal());
+    const sensorCancel = $("sensor-modal-cancel");
+    if (sensorCancel) sensorCancel.addEventListener("click", () => closeSensorModal());
+    const sensorNext = $("sensor-modal-next");
+    if (sensorNext) {
+      sensorNext.addEventListener("click", () => setSensorModalStep(2));
+    }
+    const sensorBack = $("sensor-modal-back");
+    if (sensorBack) {
+      sensorBack.addEventListener("click", () => setSensorModalStep(1));
+    }
     $("btn-refresh").addEventListener("click", () => refresh());
     $("btn-save-config").addEventListener("click", () => saveConfig());
     $("btn-save-cycle").addEventListener("click", () => saveConfig());

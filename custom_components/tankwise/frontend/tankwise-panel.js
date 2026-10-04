@@ -30,6 +30,7 @@ class TankwisePanel extends HTMLElement {
     this._logs = [];
     this._entityModal = null; // { key, domains, title, hint, query, draft: string[] }
     this._historyModal = null; // { range, points, loading, message, available }
+    this._sensorModal = null; // { step: 1|2 }
   }
 
   set hass(hass) {
@@ -39,7 +40,7 @@ class TankwisePanel extends HTMLElement {
       this._booted = true;
       this._lastLang = lang;
       this._boot();
-    } else if (this._entityModal || this._historyModal) {
+    } else if (this._entityModal || this._historyModal || this._sensorModal) {
       // Keep modal interaction stable — page refresh was closing entity selects.
       this._lastLang = lang;
     } else if (this._selected || this._lastLang !== lang) {
@@ -959,6 +960,90 @@ class TankwisePanel extends HTMLElement {
     this._render();
   }
 
+  _openSensorModal() {
+    this._sensorModal = { step: 1 };
+    this._render();
+  }
+
+  _closeSensorModal() {
+    this._sensorModal = null;
+    this._render();
+  }
+
+  _setSensorModalStep(step) {
+    if (!this._sensorModal) return;
+    this._sensorModal = { step: step === 2 ? 2 : 1 };
+    this._render();
+  }
+
+  _sensorModalHtml() {
+    const modal = this._sensorModal;
+    if (!modal) return "";
+    const step = modal.step === 2 ? 2 : 1;
+    const firmwareBase = "/tankwise/frontend/firmware";
+    const wiringSrc = "/tankwise/frontend/img/sensor-wiring.svg";
+    const step1 = `
+      <div class="sensor-body">
+        <h4>${this._t("sensor_step1_title")}</h4>
+        <p class="desc">${this._t("sensor_step1_desc")}</p>
+        <div class="sensor-wiring">
+          <img src="${wiringSrc}" alt="${this._esc(this._t("sensor_wiring_alt"))}" />
+        </div>
+        <ul class="sensor-list">
+          <li>${this._t("sensor_wire_vcc")}</li>
+          <li>${this._t("sensor_wire_gnd")}</li>
+          <li>${this._t("sensor_wire_trig")}</li>
+          <li>${this._t("sensor_wire_echo")}</li>
+          <li>${this._t("sensor_mount_tip")}</li>
+        </ul>
+      </div>`;
+    const step2 = `
+      <div class="sensor-body">
+        <h4>${this._t("sensor_step2_title")}</h4>
+        <p class="desc">${this._t("sensor_step2_desc")}</p>
+        <div class="sensor-flash-actions">
+          <a class="button-link" href="${firmwareBase}/install.html" target="_blank" rel="noopener noreferrer">${this._t("sensor_open_installer")}</a>
+          <a class="button-link secondary" href="${firmwareBase}/sensor-firmware.bin" download="sensor-firmware.bin">${this._t("sensor_download_bin")}</a>
+          <a class="button-link secondary" href="https://web.esphome.io/" target="_blank" rel="noopener noreferrer">${this._t("sensor_open_esphome_web")}</a>
+        </div>
+        <ol class="sensor-list ordered">
+          <li>${this._t("sensor_flash_step_1")}</li>
+          <li>${this._t("sensor_flash_step_2")}</li>
+          <li>${this._t("sensor_flash_step_3")}</li>
+          <li>${this._t("sensor_flash_step_4")}</li>
+        </ol>
+        <p class="hint">${this._t("sensor_flash_hint")}</p>
+      </div>`;
+    return `
+      <div class="modal-backdrop" data-sensor-backdrop>
+        <div class="modal sensor-modal" role="dialog" aria-modal="true" aria-label="${this._t("sensor_modal_title")}">
+          <div class="modal-head">
+            <h3>${this._t("sensor_modal_title")}</h3>
+            <button type="button" class="modal-x" data-sensor-close title="${this._t("close")}">×</button>
+          </div>
+          <div class="sensor-steps" aria-hidden="true">
+            <span class="sensor-step ${step === 1 ? "active" : ""}">1</span>
+            <span class="sensor-step-line"></span>
+            <span class="sensor-step ${step === 2 ? "active" : ""}">2</span>
+          </div>
+          ${step === 1 ? step1 : step2}
+          <div class="modal-actions sensor-modal-actions">
+            ${
+              step === 2
+                ? `<button type="button" class="secondary" data-sensor-back>${this._t("sensor_back")}</button>`
+                : ""
+            }
+            <button type="button" class="secondary" data-sensor-close>${this._t("close")}</button>
+            ${
+              step === 1
+                ? `<button type="button" data-sensor-next>${this._t("sensor_next")}</button>`
+                : ""
+            }
+          </div>
+        </div>
+      </div>`;
+  }
+
   _historyModalHtml() {
     const modal = this._historyModal;
     if (!modal) return "";
@@ -1111,6 +1196,41 @@ class TankwisePanel extends HTMLElement {
         .history-ranges { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 8px; }
         .history-body { overflow: auto; }
         .level-chart { display: block; width: 100%; height: auto; }
+        .sensor-modal { width: min(720px, 100%); max-height: min(92vh, 860px); }
+        .sensor-steps { display: flex; align-items: center; gap: 10px; margin: 2px 0 8px; }
+        .sensor-step {
+          width: 28px; height: 28px; border-radius: 50%;
+          display: inline-flex; align-items: center; justify-content: center;
+          font-size: 0.85rem; font-weight: 700; color: var(--tw-muted);
+          background: #f0f4f2; border: 1px solid var(--tw-border);
+        }
+        .sensor-step.active { color: #fff; background: var(--tw-green); border-color: var(--tw-green); }
+        .sensor-step-line { flex: 1; height: 2px; background: var(--tw-border); max-width: 64px; }
+        .sensor-body { overflow: auto; min-height: 0; }
+        .sensor-body h4 { margin: 0 0 6px; color: var(--tw-green-dark); font-size: 1rem; }
+        .sensor-body .desc { color: var(--tw-muted); font-size: 0.9rem; margin: 0 0 10px; }
+        .sensor-wiring {
+          margin: 8px 0 12px; border: 1px solid var(--tw-border); border-radius: 12px;
+          background: #f7faf8; overflow: hidden;
+        }
+        .sensor-wiring img { display: block; width: 100%; height: auto; }
+        .sensor-list {
+          margin: 0; padding-left: 1.2rem; color: #31463c; font-size: 0.9rem; line-height: 1.45;
+        }
+        .sensor-list li + li { margin-top: 4px; }
+        .sensor-list.ordered { list-style: decimal; }
+        .sensor-flash-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 12px; }
+        .button-link {
+          display: inline-flex; align-items: center; justify-content: center;
+          padding: 11px 16px; border-radius: 10px; background: var(--tw-green);
+          color: #fff; font-weight: 700; font-size: 0.92rem; text-decoration: none;
+          border: 1px solid transparent;
+        }
+        .button-link:hover { background: var(--tw-green-dark); }
+        .button-link.secondary {
+          background: #fff; color: var(--tw-green-dark); border-color: var(--tw-green);
+        }
+        .sensor-modal-actions { margin-top: 4px; }
         .stats {
           display: grid;
           grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
@@ -1284,6 +1404,24 @@ class TankwisePanel extends HTMLElement {
         this._render();
       };
     });
+    root.querySelectorAll("[data-open-sensor-modal]").forEach((el) => {
+      el.onclick = () => this._openSensorModal();
+    });
+    root.querySelectorAll("[data-sensor-close]").forEach((el) => {
+      el.onclick = () => this._closeSensorModal();
+    });
+    root.querySelectorAll("[data-sensor-next]").forEach((el) => {
+      el.onclick = () => this._setSensorModalStep(2);
+    });
+    root.querySelectorAll("[data-sensor-back]").forEach((el) => {
+      el.onclick = () => this._setSensorModalStep(1);
+    });
+    const sensorBackdrop = root.querySelector("[data-sensor-backdrop]");
+    if (sensorBackdrop) {
+      sensorBackdrop.onclick = (ev) => {
+        if (ev.target === sensorBackdrop) this._closeSensorModal();
+      };
+    }
     const btn = (id, fn) => {
       const el = root.getElementById(id);
       if (el) el.onclick = () => fn();
@@ -1482,6 +1620,7 @@ class TankwisePanel extends HTMLElement {
               <button class="tab ${sec === "monitor" ? "active" : ""}" data-tab="monitor" type="button">${this._t("tab_monitor")}</button>
               <button class="tab ${sec === "config" ? "active" : ""}" data-tab="config" type="button">${this._t("tab_config")}</button>
               <button class="tab ${sec === "cycle" ? "active" : ""}" data-tab="cycle" type="button">${this._t("tab_cycle")}</button>
+              <button class="tab" data-open-sensor-modal type="button">${this._t("tab_sensor_level")}</button>
               <button class="tab ${sec === "alerts" ? "active" : ""}" data-tab="alerts" type="button">${this._t("tab_alerts")}</button>
               <button class="tab ${sec === "logs" ? "active" : ""}" data-tab="logs" type="button">${this._t("tab_logs")}</button>
             </div>
@@ -1780,6 +1919,7 @@ class TankwisePanel extends HTMLElement {
           }
           ${this._entityModalHtml()}
           ${this._historyModalHtml()}
+          ${this._sensorModalHtml()}
         </div>
       </div>
     `;

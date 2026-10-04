@@ -39,6 +39,7 @@
             <button type="button" class="tab active" data-tab="monitor" data-i18n="tab_monitor">Monitor</button>
             <button type="button" class="tab" data-tab="config" data-i18n="entities_title">Entities</button>
             <button type="button" class="tab" data-tab="cycle" data-i18n="cycle_tab">Cycle / hysteresis</button>
+            <button type="button" class="tab" id="btn-sensor-level" data-i18n="tab_sensor_level">Level sensor</button>
             <button type="button" class="tab" data-tab="alerts" data-i18n="tab_alerts">Alerts</button>
             <button type="button" class="tab" data-tab="logs" data-i18n="tab_logs">Logs</button>
           </div>
@@ -256,6 +257,86 @@
           <button type="button" class="tab" data-history-range="1m" data-i18n="range_1m">1 month</button>
         </div>
         <div class="history-body" id="history-body"></div>
+      </div>
+    </div>
+
+    <div class="modal-backdrop hidden" id="sensor-modal">
+      <div class="modal sensor-modal" role="dialog" aria-modal="true" aria-labelledby="sensor-modal-title">
+        <div class="modal-head">
+          <h3 id="sensor-modal-title" data-i18n="sensor_modal_title">Level sensor</h3>
+          <button type="button" class="modal-x" id="sensor-modal-close" data-i18n-title="close" title="Close">×</button>
+        </div>
+        <div class="sensor-steps" id="sensor-steps" aria-label="Steps">
+          <span class="sensor-step active" data-sensor-step-indicator="1">1</span>
+          <span class="sensor-step-line"></span>
+          <span class="sensor-step" data-sensor-step-indicator="2">2</span>
+        </div>
+        <div class="sensor-body" id="sensor-step-1">
+          <h4 data-i18n="sensor_step1_title">1. Physical wiring</h4>
+          <p class="desc" data-i18n="sensor_step1_desc">
+            Wire the waterproof ultrasonic sensor to a NodeMCU ESP8266 (this firmware is for ESP8266, not ESP32).
+          </p>
+          <div class="sensor-wiring">
+            <img
+              src="static/img/sensor-wiring.svg"
+              alt="NodeMCU ESP8266 to JSN-SR04T / AJ-SR04M wiring diagram"
+              data-i18n-alt="sensor_wiring_alt"
+            />
+          </div>
+          <ul class="sensor-list">
+            <li data-i18n="sensor_wire_vcc">VIN / 5V → VCC (JSN-SR04T needs 5V)</li>
+            <li data-i18n="sensor_wire_gnd">GND → GND</li>
+            <li data-i18n="sensor_wire_trig">D1 (GPIO5) → Trig</li>
+            <li data-i18n="sensor_wire_echo">D2 (GPIO4) → Echo</li>
+            <li data-i18n="sensor_mount_tip">Mount the sensor above the water, facing down, away from walls and foam.</li>
+          </ul>
+        </div>
+        <div class="sensor-body hidden" id="sensor-step-2">
+          <h4 data-i18n="sensor_step2_title">2. Install firmware (USB)</h4>
+          <p class="desc" data-i18n="sensor_step2_desc">
+            Easiest path: open the TankWise installer page (Chrome/Edge), connect the NodeMCU by USB and flash in one click.
+          </p>
+          <div class="sensor-flash-actions">
+            <a
+              class="button-link"
+              id="sensor-open-installer"
+              href="static/firmware/install.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              data-i18n="sensor_open_installer"
+              >Install via USB (recommended)</a
+            >
+            <a
+              class="button-link secondary"
+              href="static/firmware/sensor-firmware.bin"
+              download="sensor-firmware.bin"
+              data-i18n="sensor_download_bin"
+              >Download .bin</a
+            >
+            <a
+              class="button-link secondary"
+              href="https://web.esphome.io/"
+              target="_blank"
+              rel="noopener noreferrer"
+              data-i18n="sensor_open_esphome_web"
+              >Open ESPHome Web</a
+            >
+          </div>
+          <ol class="sensor-list ordered">
+            <li data-i18n="sensor_flash_step_1">Connect the NodeMCU with a data USB cable</li>
+            <li data-i18n="sensor_flash_step_2">In the installer, click Install and pick the serial port</li>
+            <li data-i18n="sensor_flash_step_3">Or on web.esphome.io: Connect → Install → Choose the downloaded .bin</li>
+            <li data-i18n="sensor_flash_step_4">After reboot, join the sensor Wi‑Fi hotspot and set your home network</li>
+          </ol>
+          <p class="hint" data-i18n="sensor_flash_hint">
+            Web Serial works in Chrome/Edge on a normal browser tab (not inside some iframes). Prefer the installer page opened above.
+          </p>
+        </div>
+        <div class="modal-actions sensor-modal-actions">
+          <button type="button" class="secondary" id="sensor-modal-back" hidden data-i18n="sensor_back">Back</button>
+          <button type="button" class="secondary" id="sensor-modal-cancel" data-i18n="close">Close</button>
+          <button type="button" id="sensor-modal-next" data-i18n="sensor_next">Next: firmware</button>
+        </div>
       </div>
     </div>
 
