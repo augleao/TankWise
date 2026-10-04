@@ -133,6 +133,12 @@ Após atualizar a integração, recarregue o frontend do HA (Ctrl+F5) se os card
 - Home Assistant **2024.8+**
 - Add-on: Home Assistant OS / Supervised
 
+## Support
+
+If TankWise helps you, you can support development here:
+
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-support-yellow.svg)](https://buymeacoffee.com/augleao)
+
 ## Licença
 
 MIT — [LICENSE](LICENSE)

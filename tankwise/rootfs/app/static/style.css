@@ -544,3 +544,36 @@ button:disabled {
 .log-ts { color: var(--tw-muted); font-family: ui-monospace, monospace; font-size: 0.78rem; }
 .log-ev { font-weight: 700; color: var(--tw-green-dark); }
 .log-extra { color: #31463c; word-break: break-word; line-height: 1.35; }
+
+.bmc-fab {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 40;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: #ffdd00;
+  color: #1c2b24;
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 700;
+  border: 1px solid #e6c700;
+  box-shadow: 0 8px 20px rgba(20, 60, 40, 0.16);
+}
+
+.bmc-fab:hover {
+  background: #ffe44d;
+  color: #102019;
+}
+
+@media (max-width: 640px) {
+  .bmc-fab {
+    right: 12px;
+    bottom: 12px;
+    padding: 9px 12px;
+    font-size: 0.8rem;
+  }
+}
