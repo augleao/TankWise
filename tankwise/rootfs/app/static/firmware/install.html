@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>TankWise — Instalar firmware do sensor</title>
+    <script
+      type="module"
+      src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"
+    ></script>
+    <style>
+      :root {
+        --tw-green: #1b7f5a;
+        --tw-green-dark: #145c42;
+        --tw-bg: #eef2f0;
+        --tw-border: #d7e0db;
+        --tw-muted: #5b6b63;
+        --tw-ink: #1c2b24;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "Segoe UI", system-ui, sans-serif;
+        color: var(--tw-ink);
+        background: linear-gradient(180deg, #dce8e1 0%, var(--tw-bg) 40%, #e8eeea 100%);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+      }
+      .card {
+        width: min(520px, 100%);
+        background: #fff;
+        border: 1px solid var(--tw-border);
+        border-radius: 16px;
+        padding: 28px 24px;
+        box-shadow: 0 12px 32px rgba(20, 60, 40, 0.1);
+      }
+      h1 {
+        margin: 0 0 8px;
+        color: var(--tw-green-dark);
+        font-size: 1.4rem;
+      }
+      p {
+        margin: 0 0 12px;
+        color: var(--tw-muted);
+        line-height: 1.45;
+        font-size: 0.95rem;
+      }
+      ol {
+        margin: 0 0 18px;
+        padding-left: 1.2rem;
+        color: #31463c;
+        line-height: 1.5;
+      }
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+        margin-top: 8px;
+      }
+      a.secondary {
+        display: inline-flex;
+        align-items: center;
+        padding: 10px 14px;
+        border-radius: 10px;
+        border: 1px solid var(--tw-green);
+        color: var(--tw-green-dark);
+        text-decoration: none;
+        font-weight: 700;
+        font-size: 0.92rem;
+        background: #fff;
+      }
+      .note {
+        margin-top: 16px;
+        font-size: 0.82rem;
+        color: var(--tw-muted);
+      }
+      esp-web-install-button {
+        --esp-tools-button-color: #fff;
+        --esp-tools-button-background: var(--tw-green);
+        --esp-tools-button-border-radius: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="card">
+      <h1>Instalar firmware do sensor</h1>
+      <p>
+        Conecte o <strong>NodeMCU ESP8266</strong> ao computador via USB
+        (cabo com dados). Use Chrome ou Edge.
+      </p>
+      <ol>
+        <li>Conecte o NodeMCU na porta USB</li>
+        <li>Clique em <strong>Instalar</strong> e escolha a porta serial</li>
+        <li>Confirme a gravação e aguarde o fim</li>
+        <li>Depois, configure o Wi‑Fi pelo hotspot do sensor (captive portal)</li>
+      </ol>
+      <div class="actions">
+        <esp-web-install-button manifest="./manifest.json">
+          <button type="button" slot="activate">Instalar</button>
+          <span slot="unsupported">Use Chrome/Edge nesta página ou abra o ESPHome Web.</span>
+        </esp-web-install-button>
+        <a class="secondary" href="./sensor-firmware.bin" download>Baixar .bin</a>
+        <a
+          class="secondary"
+          href="https://web.esphome.io/"
+          target="_blank"
+          rel="noopener noreferrer"
+          >Abrir ESPHome Web</a
+        >
+      </div>
+      <p class="note">
+        Se o botão Instalar não aparecer, o navegador não suporta Web Serial.
+        Baixe o .bin e use
+        <a href="https://web.esphome.io/" target="_blank" rel="noopener noreferrer"
+          >web.esphome.io</a
+        >
+        (Connect → Install → Choose file).
+      </p>
+    </main>
+  </body>
+</html>
