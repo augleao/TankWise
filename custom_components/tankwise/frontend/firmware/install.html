@@ -99,7 +99,10 @@
         <li>Depois, configure o Wi‑Fi pelo hotspot do sensor (captive portal)</li>
       </ol>
       <div class="actions">
-        <esp-web-install-button manifest="./manifest.json"></esp-web-install-button>
+        <esp-web-install-button manifest="./manifest.json">
+          <button type="button" slot="activate">Instalar</button>
+          <span slot="unsupported">Use Chrome/Edge nesta página ou abra o ESPHome Web.</span>
+        </esp-web-install-button>
         <a class="secondary" href="./sensor-firmware.bin" download>Baixar .bin</a>
         <a
           class="secondary"

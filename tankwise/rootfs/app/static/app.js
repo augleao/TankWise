@@ -390,10 +390,7 @@
     const back = $("sensor-modal-back");
     const next = $("sensor-modal-next");
     if (back) back.hidden = state.sensorModalStep === 1;
-    if (next) {
-      next.hidden = state.sensorModalStep === 2;
-      next.textContent = t("sensor_next");
-    }
+    if (next) next.hidden = state.sensorModalStep === 2;
   }
 
   function openSensorModal() {
