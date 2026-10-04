@@ -32,8 +32,22 @@ def _integration_version() -> str:
         return "0"
 
 
+def _frontend_asset_token() -> str:
+    """Hash frontend assets so panel JS refreshes even without a version bump."""
+    import hashlib
+
+    digest = hashlib.sha1()
+    for name in ("tankwise-panel.js", "i18n.js"):
+        path = FRONTEND_PATH / name
+        try:
+            digest.update(path.read_bytes())
+        except OSError:
+            digest.update(name.encode())
+    return digest.hexdigest()[:12]
+
+
 def _panel_js_url() -> str:
-    return f"{PANEL_JS_PATH}?v={_integration_version()}"
+    return f"{PANEL_JS_PATH}?v={_integration_version()}-{_frontend_asset_token()}"
 
 
 _PANEL_REGISTERED = False
