@@ -19,8 +19,8 @@ LOVELACE_CARDS: tuple[str, ...] = (
 )
 
 
-def _card_url(filename: str) -> str:
-    return f"/tankwise/frontend/{filename}?v={_integration_version()}"
+def _card_url(hass: HomeAssistant, filename: str) -> str:
+    return f"/tankwise/frontend/{filename}?v={_integration_version(hass)}"
 
 
 def _card_url_base(filename: str) -> str:
@@ -61,12 +61,12 @@ def _resource_version(url: str) -> str | None:
 
 
 async def _async_register_one_storage_resource(
-    resources: Any, filename: str
+    hass: HomeAssistant, resources: Any, filename: str
 ) -> None:
     """Create or update one card module in Lovelace storage resources."""
-    url = _card_url(filename)
+    url = _card_url(hass, filename)
     base = _card_url_base(filename)
-    version = _integration_version()
+    version = _integration_version(hass)
     existing = [
         item
         for item in resources.async_items()
@@ -100,12 +100,14 @@ async def _async_register_one_storage_resource(
     )
 
 
-async def _async_register_storage_resources(resources: Any) -> None:
+async def _async_register_storage_resources(
+    hass: HomeAssistant, resources: Any
+) -> None:
     """Create or update all Tankwise card modules in Lovelace storage."""
     if hasattr(resources, "async_get_info"):
         await resources.async_get_info()
     for filename in LOVELACE_CARDS:
-        await _async_register_one_storage_resource(resources, filename)
+        await _async_register_one_storage_resource(hass, resources, filename)
 
 
 def _register_extra_js(hass: HomeAssistant) -> None:
@@ -117,7 +119,7 @@ def _register_extra_js(hass: HomeAssistant) -> None:
         return
 
     for filename in LOVELACE_CARDS:
-        url = _card_url(filename)
+        url = _card_url(hass, filename)
         try:
             add_extra_js_url(hass, url)
             _LOGGER.info("Registered Tankwise Lovelace card via extra JS: %s", url)
@@ -137,7 +139,9 @@ async def async_register_lovelace_card(hass: HomeAssistant) -> None:
     if lovelace is None:
         retries = int(hass.data.setdefault(DOMAIN, {}).get("_lovelace_retries", 0))
         if retries >= 12:
-            manuals = ", ".join(_card_url(name) for name in LOVELACE_CARDS)
+            manuals = ", ".join(
+                _card_url(hass, name) for name in LOVELACE_CARDS
+            )
             _LOGGER.warning(
                 "Lovelace never became ready; add Tankwise card resources manually: %s",
                 manuals,
@@ -166,7 +170,7 @@ async def async_register_lovelace_card(hass: HomeAssistant) -> None:
                 async_call_later(hass, 5, _when_loaded)
                 return
             try:
-                await _async_register_storage_resources(resources)
+                await _async_register_storage_resources(hass, resources)
             except Exception:  # noqa: BLE001
                 _LOGGER.exception(
                     "Failed to register Tankwise Lovelace cards in storage mode"

@@ -2,9 +2,6 @@
 
 from __future__ import annotations
 
-import json
-from pathlib import Path
-
 import logging
 from typing import Any
 
@@ -13,6 +10,7 @@ import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv
+from homeassistant.loader import async_get_integration
 
 from .const import (
     CONF_CRITICAL_LEVEL_PERCENT,
@@ -32,6 +30,7 @@ from .const import (
     CONF_ON_THRESHOLD,
     CONF_MIN_AUTO_SWITCH_SECONDS,
     CONF_THRESHOLD_MODE,
+    DATA_VERSION,
     DEFAULT_THRESHOLD_MODE,
     THRESHOLD_MODE_DISTANCE,
     THRESHOLD_MODE_PERCENT,
@@ -53,15 +52,27 @@ from .helpers import (
 _LOGGER = logging.getLogger(__name__)
 
 
-
-def integration_version() -> str:
+async def async_cache_integration_version(hass: HomeAssistant) -> str:
+    """Read integration version once via the loader (no blocking disk I/O)."""
+    hass.data.setdefault(DOMAIN, {})
     try:
-        manifest = json.loads(
-            (Path(__file__).with_name("manifest.json")).read_text(encoding="utf-8")
-        )
-        return str(manifest.get("version", "?"))
+        integration = await async_get_integration(hass, DOMAIN)
+        version = str(integration.version) if integration.version else "?"
     except Exception:  # noqa: BLE001
-        return "?"
+        _LOGGER.exception("Could not resolve Tankwise integration version")
+        version = "?"
+    hass.data[DOMAIN][DATA_VERSION] = version
+    return version
+
+
+def integration_version(hass: HomeAssistant) -> str:
+    """Return the version cached at setup."""
+    data = hass.data.get(DOMAIN)
+    if isinstance(data, dict):
+        cached = data.get(DATA_VERSION)
+        if cached:
+            return str(cached)
+    return "?"
 
 
 DATA_KEYS = {
@@ -176,7 +187,7 @@ def entry_payload(hass: HomeAssistant, entry: ConfigEntry) -> dict[str, Any]:
     return {
         "entry_id": entry.entry_id,
         "title": entry.title,
-        "version": integration_version(),
+        "version": integration_version(hass),
         "config": with_normalized_notify(config),
         "status": status,
     }
