@@ -39,6 +39,13 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
     # Lazy imports — never block config flow discovery.
     try:
+        from .api_common import async_cache_integration_version
+
+        await async_cache_integration_version(hass)
+    except Exception:  # noqa: BLE001
+        _LOGGER.exception("Tankwise could not cache integration version")
+
+    try:
         from .websocket_api import async_register_websockets
 
         async_register_websockets(hass)
@@ -142,9 +149,18 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Tankwise from a config entry."""
+    from .api_common import async_cache_integration_version
+    from .const import DATA_VERSION
     from .controller import TankwiseController
     from .helpers import merge_entry_config
     from .panel import async_register_panel, is_panel_registered
+
+    hass.data.setdefault(DOMAIN, {})
+    if DATA_VERSION not in hass.data[DOMAIN]:
+        try:
+            await async_cache_integration_version(hass)
+        except Exception:  # noqa: BLE001
+            _LOGGER.exception("Tankwise could not cache integration version on entry setup")
 
     # Ensure sidebar panel exists even if domain setup ran before frontend.
     if not is_panel_registered():
@@ -153,7 +169,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         except Exception:  # noqa: BLE001
             _LOGGER.exception("Tankwise sidebar panel retry failed on entry setup")
 
-    hass.data.setdefault(DOMAIN, {})
     config = merge_entry_config(dict(entry.data), dict(entry.options))
 
     # Migrate inverted distance thresholds from older builds (on < off).

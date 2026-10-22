@@ -12,6 +12,8 @@ from pathlib import Path
 
 from homeassistant.core import HomeAssistant
 
+from .api_common import integration_version
+
 _LOGGER = logging.getLogger(__name__)
 
 FRONTEND_PATH = Path(__file__).parent / "frontend"
@@ -19,21 +21,13 @@ PANEL_URL_PATH = "tankwise"
 PANEL_JS_PATH = "/tankwise/frontend/tankwise-panel.js"
 
 
-def _integration_version() -> str:
-    """Return manifest version for cache-busting the panel JS."""
-    try:
-        import json
-
-        manifest = json.loads(
-            (Path(__file__).with_name("manifest.json")).read_text(encoding="utf-8")
-        )
-        return str(manifest.get("version", "0"))
-    except Exception:  # noqa: BLE001
-        return "0"
+def _integration_version(hass: HomeAssistant) -> str:
+    """Return cached manifest version for cache-busting the panel JS."""
+    return integration_version(hass) or "0"
 
 
-def _panel_js_url() -> str:
-    return f"{PANEL_JS_PATH}?v={_integration_version()}"
+def _panel_js_url(hass: HomeAssistant) -> str:
+    return f"{PANEL_JS_PATH}?v={_integration_version(hass)}"
 
 
 _PANEL_REGISTERED = False
@@ -83,7 +77,7 @@ def _register_built_in(hass: HomeAssistant) -> None:
                 "name": "tankwise-panel",
                 "embed_iframe": False,
                 "trust_external": False,
-                "module_url": _panel_js_url(),
+                "module_url": _panel_js_url(hass),
             }
         },
         require_admin=False,
@@ -102,7 +96,7 @@ async def _register_panel_custom(hass: HomeAssistant) -> None:
         webcomponent_name="tankwise-panel",
         sidebar_title="Tankwise",
         sidebar_icon="mdi:water-pump",
-        module_url=_panel_js_url(),
+        module_url=_panel_js_url(hass),
         embed_iframe=False,
         require_admin=False,
     )
@@ -147,7 +141,7 @@ async def async_register_panel(hass: HomeAssistant) -> None:
                         "name": "tankwise-panel",
                         "embed_iframe": False,
                         "trust_external": False,
-                        "module_url": _panel_js_url(),
+                        "module_url": _panel_js_url(hass),
                     }
                 },
                 require_admin=False,

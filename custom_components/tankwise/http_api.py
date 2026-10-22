@@ -18,6 +18,14 @@ from . import level_history
 _LOGGER = logging.getLogger(__name__)
 
 
+def _reject_non_admin(view: HomeAssistantView, request: web.Request) -> web.Response | None:
+    """Return 403 if the authenticated user is not an admin."""
+    hass_user = request.get("hass_user")
+    if hass_user is None or not hass_user.is_admin:
+        return view.json_message("Admin access required", HTTPStatus.FORBIDDEN)
+    return None
+
+
 class TankwiseEntriesView(HomeAssistantView):
     """List Tankwise config entries with live status."""
 
@@ -60,6 +68,8 @@ class TankwiseConfigView(HomeAssistantView):
     requires_auth = True
 
     async def post(self, request: web.Request, entry_id: str) -> web.Response:
+        if denied := _reject_non_admin(self, request):
+            return denied
         hass: HomeAssistant = request.app["hass"]
         entry = api_common.resolve_entry(hass, entry_id)
         if entry is None:
@@ -88,6 +98,8 @@ class TankwiseEnabledView(HomeAssistantView):
     requires_auth = True
 
     async def post(self, request: web.Request, entry_id: str) -> web.Response:
+        if denied := _reject_non_admin(self, request):
+            return denied
         hass: HomeAssistant = request.app["hass"]
         entry = api_common.resolve_entry(hass, entry_id)
         if entry is None:
@@ -112,6 +124,8 @@ class TankwiseDemandView(HomeAssistantView):
     requires_auth = True
 
     async def post(self, request: web.Request, entry_id: str) -> web.Response:
+        if denied := _reject_non_admin(self, request):
+            return denied
         hass: HomeAssistant = request.app["hass"]
         entry = api_common.resolve_entry(hass, entry_id)
         if entry is None:
@@ -138,6 +152,8 @@ class TankwiseReconcileView(HomeAssistantView):
     requires_auth = True
 
     async def post(self, request: web.Request, entry_id: str) -> web.Response:
+        if denied := _reject_non_admin(self, request):
+            return denied
         hass: HomeAssistant = request.app["hass"]
         entry = api_common.resolve_entry(hass, entry_id)
         if entry is None:
@@ -227,6 +243,8 @@ class TankwiseTestNotifyView(HomeAssistantView):
     requires_auth = True
 
     async def post(self, request: web.Request, entry_id: str) -> web.Response:
+        if denied := _reject_non_admin(self, request):
+            return denied
         hass: HomeAssistant = request.app["hass"]
         entry = api_common.resolve_entry(hass, entry_id)
         if entry is None:

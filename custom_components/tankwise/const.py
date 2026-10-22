@@ -8,6 +8,9 @@ DOMAIN: Final = "tankwise"
 MANUFACTURER: Final = "Tankwise"
 MODEL: Final = "Well pump controller"
 
+# hass.data[DOMAIN] meta keys (must not collide with config entry ids)
+DATA_VERSION: Final = "_version"
+
 # Config entry data / options keys
 CONF_PUMP_ENTITY: Final = "pump_entity"
 CONF_DISTANCE_ENTITY: Final = "distance_entity"
