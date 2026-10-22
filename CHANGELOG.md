@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.5] - 2026-10-22
+
+### Fixed
+- Integration version is read once at setup via `async_get_integration` and reused (no blocking `manifest.json` disk I/O on HTTP/websocket polls).
+- HTTP config/control POSTs now require an admin user, matching the websocket API (`request["hass_user"].is_admin`).
+- HACS Action no longer suppresses the topics validation check.
+
 ## [0.6.4] - 2026-09-24
 
 ### Fixed
