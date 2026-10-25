@@ -24,8 +24,56 @@
       tab_monitor: "Monitor",
       tab_config: "Entities & calibration",
       tab_cycle: "Timing",
+      tab_sensor_level: "Level sensor",
       tab_alerts: "Alerts",
       tab_logs: "Logs",
+      sensor_modal_title: "Level sensor setup",
+      sensor_step1_title: "1. Materials list",
+      sensor_step1_desc:
+        "Gather these parts before wiring and flashing the level sensor.",
+      sensor_bom_psu_title: "USB 5V power supply",
+      sensor_bom_psu_desc: "Wall adapter or USB power bank to power the NodeMCU after install.",
+      sensor_bom_cable_title: "Micro-USB data cable",
+      sensor_bom_cable_desc: "Must carry data (not charge-only) to flash the NodeMCU from the computer.",
+      sensor_bom_board_title: "NodeMCU ESP8266 board",
+      sensor_bom_board_desc: "NodeMCU v2 / ESP8266MOD (this firmware is for ESP8266, not ESP32).",
+      sensor_bom_sensor_title: "Waterproof ultrasonic sensor kit",
+      sensor_bom_sensor_desc: "JSN-SR04T or AJ-SR04M set: control board + waterproof probe with cable.",
+      sensor_bom_download: "Download list (.txt)",
+      sensor_bom_txt_filename: "tankwise-level-sensor-materials.txt",
+      sensor_bom_txt_header: "TankWise — level sensor materials",
+      sensor_psu_alt: "USB 5V power supply",
+      sensor_cable_alt: "Micro-USB data cable",
+      sensor_nodemcu_alt: "NodeMCU ESP8266 board",
+      sensor_ultrasonic_alt: "Waterproof ultrasonic sensor kit",
+      sensor_step2_title: "2. Physical wiring",
+      sensor_step2_desc:
+        "Wire the waterproof ultrasonic sensor to a NodeMCU ESP8266. This firmware targets ESP8266 (nodemcuv2), not ESP32.",
+      sensor_wiring_alt:
+        "Wiring diagram: NodeMCU ESP8266 to JSN-SR04T or AJ-SR04M",
+      sensor_wire_vcc: "VIN / 5V → VCC (JSN-SR04T needs 5V; AJ-SR04M accepts 3.3–5V)",
+      sensor_wire_gnd: "GND → GND",
+      sensor_wire_trig: "D3 (GPIO0) → Trig (inverted in firmware)",
+      sensor_wire_echo: "D4 (GPIO2) → Echo",
+      sensor_mount_tip:
+        "Mount the sensor above the water, facing straight down, clear of walls and foam.",
+      sensor_step3_title: "3. Install firmware (USB)",
+      sensor_step3_desc:
+        "Easiest path: open the TankWise installer (Chrome/Edge), plug in the NodeMCU by USB and flash in one click. Fallback: download the .bin and use ESPHome Web.",
+      sensor_open_installer: "Install via USB (recommended)",
+      sensor_download_bin: "Download .bin",
+      sensor_open_esphome_web: "Open ESPHome Web",
+      sensor_flash_step_1: "Connect the NodeMCU with a data USB cable",
+      sensor_flash_step_2: "In the installer, click Install and pick the serial port",
+      sensor_flash_step_3:
+        "Or on web.esphome.io: Connect → Install → choose the downloaded .bin",
+      sensor_flash_step_4:
+        "After reboot, join the sensor Wi‑Fi hotspot and set your home network",
+      sensor_flash_hint:
+        "Web Serial needs Chrome or Edge in a normal browser tab (some iframes block it). Prefer the installer page opened above.",
+      sensor_next: "Next: wiring",
+      sensor_next_firmware: "Next: firmware",
+      sensor_back: "Back",
       live_status: "Live status",
       live_status_desc:
         "Tank volume, pump state and manual demand control (environment variable).",
@@ -258,8 +306,56 @@
       tab_monitor: "Monitor",
       tab_config: "Entidades & calibração",
       tab_cycle: "Temporização",
+      tab_sensor_level: "Sensor de Nível",
       tab_alerts: "Alertas",
       tab_logs: "Logs",
+      sensor_modal_title: "Montagem do sensor de nível",
+      sensor_step1_title: "1. Lista de materiais",
+      sensor_step1_desc:
+        "Separe estes itens antes de fazer as conexões e gravar o firmware.",
+      sensor_bom_psu_title: "Fonte USB 5V",
+      sensor_bom_psu_desc: "Carregador de parede ou power bank USB para alimentar o NodeMCU após a instalação.",
+      sensor_bom_cable_title: "Cabo USB micro (com dados)",
+      sensor_bom_cable_desc: "Precisa transmitir dados (não só carregar) para gravar o NodeMCU pelo computador.",
+      sensor_bom_board_title: "Placa NodeMCU ESP8266",
+      sensor_bom_board_desc: "NodeMCU v2 / ESP8266MOD (este firmware é para ESP8266, não ESP32).",
+      sensor_bom_sensor_title: "Conjunto do sensor ultrassônico",
+      sensor_bom_sensor_desc: "Kit JSN-SR04T ou AJ-SR04M: placa de controle + sonda à prova d'água com cabo.",
+      sensor_bom_download: "Baixar lista (.txt)",
+      sensor_bom_txt_filename: "tankwise-materiais-sensor-nivel.txt",
+      sensor_bom_txt_header: "TankWise — materiais do sensor de nível",
+      sensor_psu_alt: "Fonte USB 5V",
+      sensor_cable_alt: "Cabo USB micro com dados",
+      sensor_nodemcu_alt: "Placa NodeMCU ESP8266",
+      sensor_ultrasonic_alt: "Conjunto do sensor ultrassônico à prova d'água",
+      sensor_step2_title: "2. Conexões físicas",
+      sensor_step2_desc:
+        "Ligue o sensor ultrassônico à prova d'água em um NodeMCU ESP8266. Este firmware é para ESP8266 (nodemcuv2), não ESP32.",
+      sensor_wiring_alt:
+        "Diagrama de conexões: NodeMCU ESP8266 com JSN-SR04T ou AJ-SR04M",
+      sensor_wire_vcc: "VIN / 5V → VCC (JSN-SR04T precisa de 5V; AJ-SR04M aceita 3,3–5V)",
+      sensor_wire_gnd: "GND → GND",
+      sensor_wire_trig: "D3 (GPIO0) → Trig (invertido no firmware)",
+      sensor_wire_echo: "D4 (GPIO2) → Echo",
+      sensor_mount_tip:
+        "Instale o sensor acima da água, apontando para baixo, longe de paredes e espuma.",
+      sensor_step3_title: "3. Instalar firmware (USB)",
+      sensor_step3_desc:
+        "Caminho mais fácil: abra o instalador TankWise (Chrome/Edge), conecte o NodeMCU por USB e grave com um clique. Alternativa: baixe o .bin e use o ESPHome Web.",
+      sensor_open_installer: "Instalar via USB (recomendado)",
+      sensor_download_bin: "Baixar .bin",
+      sensor_open_esphome_web: "Abrir ESPHome Web",
+      sensor_flash_step_1: "Conecte o NodeMCU com um cabo USB com dados",
+      sensor_flash_step_2: "No instalador, clique em Instalar e escolha a porta serial",
+      sensor_flash_step_3:
+        "Ou em web.esphome.io: Connect → Install → escolha o .bin baixado",
+      sensor_flash_step_4:
+        "Após reiniciar, entre no hotspot Wi‑Fi do sensor e configure a rede de casa",
+      sensor_flash_hint:
+        "Web Serial funciona no Chrome ou Edge em uma aba normal (alguns iframes bloqueiam). Prefira a página do instalador aberta acima.",
+      sensor_next: "Próximo: conexões",
+      sensor_next_firmware: "Próximo: firmware",
+      sensor_back: "Voltar",
       live_status: "Status ao vivo",
       live_status_desc:
         "Volume da caixa, estado da bomba e controle manual da demanda (variável de ambiente).",
@@ -520,6 +616,10 @@
     scope.querySelectorAll("[data-i18n-aria]").forEach((el) => {
       const key = el.getAttribute("data-i18n-aria");
       if (key) el.setAttribute("aria-label", t(lang, key));
+    });
+    scope.querySelectorAll("[data-i18n-alt]").forEach((el) => {
+      const key = el.getAttribute("data-i18n-alt");
+      if (key) el.setAttribute("alt", t(lang, key));
     });
   }
 
