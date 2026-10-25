@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.6] - 2026-10-25
+
+### Changed
+- Firmware do sensor ultrassônico (ESP8266) atualizado para **1.0.1**, com menos erros de leitura.
+
 ## [0.6.5] - 2026-10-22
 
 ### Fixed

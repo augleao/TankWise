@@ -11,6 +11,7 @@
     pollTimer: null,
     entityModal: null,
     historyModal: null, // { range, points, loading, message }
+    sensorModalStep: 1,
     lang: "en",
   };
 
@@ -374,6 +375,77 @@
     body.innerHTML = `${
       hm.message ? `<div class="hint" style="margin-bottom:10px">${hm.message}</div>` : ""
     }${levelChartSvg(hm.points || [], hm.pump_points || [], hm.range)}`;
+  }
+
+  function sensorBomLines() {
+    return [
+      t("sensor_bom_psu_title"),
+      t("sensor_bom_cable_title"),
+      t("sensor_bom_board_title"),
+      t("sensor_bom_sensor_title"),
+    ];
+  }
+
+  function downloadSensorBomTxt() {
+    const lines = [
+      t("sensor_bom_txt_header"),
+      "",
+      ...sensorBomLines().map((item, i) => `${i + 1}. ${item}`),
+      "",
+      `- ${t("sensor_bom_psu_desc")}`,
+      `- ${t("sensor_bom_cable_desc")}`,
+      `- ${t("sensor_bom_board_desc")}`,
+      `- ${t("sensor_bom_sensor_desc")}`,
+      "",
+    ];
+    const blob = new Blob([lines.join("\n")], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = t("sensor_bom_txt_filename");
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function setSensorModalStep(step) {
+    const n = Math.min(3, Math.max(1, Number(step) || 1));
+    state.sensorModalStep = n;
+    for (let i = 1; i <= 3; i += 1) {
+      const el = $(`sensor-step-${i}`);
+      if (el) el.classList.toggle("hidden", state.sensorModalStep !== i);
+    }
+    document.querySelectorAll("[data-sensor-step-indicator]").forEach((el) => {
+      const idx = Number(el.getAttribute("data-sensor-step-indicator"));
+      el.classList.toggle("active", idx === state.sensorModalStep);
+    });
+    const back = $("sensor-modal-back");
+    const next = $("sensor-modal-next");
+    if (back) back.hidden = state.sensorModalStep === 1;
+    if (next) {
+      next.hidden = state.sensorModalStep === 3;
+      next.setAttribute(
+        "data-i18n",
+        state.sensorModalStep === 1 ? "sensor_next" : "sensor_next_firmware"
+      );
+      next.textContent =
+        state.sensorModalStep === 1 ? t("sensor_next") : t("sensor_next_firmware");
+    }
+  }
+
+  function openSensorModal() {
+    const modal = $("sensor-modal");
+    if (!modal) return;
+    modal.classList.remove("hidden");
+    setSensorModalStep(1);
+  }
+
+  function closeSensorModal() {
+    const modal = $("sensor-modal");
+    if (!modal) return;
+    modal.classList.add("hidden");
+    state.sensorModalStep = 1;
   }
 
   async function openHistoryModal(range = "1d") {
@@ -1138,6 +1210,34 @@
     document.querySelectorAll(".tab[data-tab]").forEach((el) => {
       el.addEventListener("click", () => switchTab(el.dataset.tab));
     });
+    const btnSensor = $("btn-sensor-level");
+    if (btnSensor) btnSensor.addEventListener("click", () => openSensorModal());
+    const sensorModal = $("sensor-modal");
+    if (sensorModal) {
+      sensorModal.addEventListener("click", (ev) => {
+        if (ev.target === sensorModal) closeSensorModal();
+      });
+    }
+    const sensorClose = $("sensor-modal-close");
+    if (sensorClose) sensorClose.addEventListener("click", () => closeSensorModal());
+    const sensorCancel = $("sensor-modal-cancel");
+    if (sensorCancel) sensorCancel.addEventListener("click", () => closeSensorModal());
+    const sensorNext = $("sensor-modal-next");
+    if (sensorNext) {
+      sensorNext.addEventListener("click", () =>
+        setSensorModalStep(state.sensorModalStep + 1)
+      );
+    }
+    const sensorBack = $("sensor-modal-back");
+    if (sensorBack) {
+      sensorBack.addEventListener("click", () =>
+        setSensorModalStep(state.sensorModalStep - 1)
+      );
+    }
+    const bomDownload = $("sensor-bom-download");
+    if (bomDownload) {
+      bomDownload.addEventListener("click", () => downloadSensorBomTxt());
+    }
     $("btn-refresh").addEventListener("click", () => refresh());
     $("btn-save-config").addEventListener("click", () => saveConfig());
     $("btn-save-cycle").addEventListener("click", () => saveConfig());
